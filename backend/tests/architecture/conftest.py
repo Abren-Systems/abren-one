@@ -25,6 +25,7 @@ INTEGRATIONS_ROOT = PACKAGE_ROOT / "integrations"
 
 # ── Path fixtures ──────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def backend_root() -> Path:
     return BACKEND_ROOT
@@ -57,6 +58,7 @@ def integrations_root() -> Path:
 
 # ── Discovery helpers ──────────────────────────────────────────────────────
 
+
 def discover_python_files(root: Path) -> list[Path]:
     """Return all .py files under *root*, sorted for deterministic output."""
     if not root.exists():
@@ -75,16 +77,12 @@ def discover_modules(root: Path) -> list[Path]:
     return sorted(
         d
         for d in root.iterdir()
-        if d.is_dir()
-        and not d.name.startswith("_")
-        and (
-            (d / "__init__.py").exists()
-            or any(d.rglob("*.py"))
-        )
+        if d.is_dir() and not d.name.startswith("_") and ((d / "__init__.py").exists() or any(d.rglob("*.py")))
     )
 
 
 # ── AST import extraction ─────────────────────────────────────────────────
+
 
 @dataclass(frozen=True)
 class ImportInfo:
@@ -108,7 +106,7 @@ def extract_imports(filepath: Path) -> list[ImportInfo]:
     """
     try:
         source = filepath.read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
+    except OSError, UnicodeDecodeError:
         return []
 
     try:
@@ -129,12 +127,38 @@ def extract_imports(filepath: Path) -> list[ImportInfo]:
                     )
                 )
         elif isinstance(node, ast.ImportFrom):
-            if node.module is None:
-                continue  # relative import with no module (e.g., ``from . import x``)
+            module_name = node.module or ""
+            if node.level > 0:
+                # Resolve relative import to fully-qualified module path
+                try:
+                    rel_to_src = filepath.relative_to(SRC_ROOT.parent)
+                except ValueError:
+                    if "src" in filepath.parts:
+                        src_idx = filepath.parts.index("src")
+                        rel_to_src = Path(*filepath.parts[src_idx + 1 :])
+                    else:
+                        rel_to_src = None
+
+                if rel_to_src is not None:
+                    pkg_parts = list(rel_to_src.with_suffix("").parts)
+                    cur_pkg_parts = pkg_parts if filepath.name == "__init__.py" else pkg_parts[:-1]
+                    trim = node.level - 1
+                    target_parts = cur_pkg_parts[:-trim] if trim > 0 else cur_pkg_parts
+                    base_module = ".".join(target_parts)
+                    resolved_module = (
+                        f"{base_module}.{module_name}"
+                        if (base_module and module_name)
+                        else (base_module or module_name)
+                    )
+                else:
+                    resolved_module = module_name
+            else:
+                resolved_module = module_name
+
             names = tuple(alias.name for alias in node.names)
             imports.append(
                 ImportInfo(
-                    module=node.module,
+                    module=resolved_module,
                     names=names,
                     filepath=filepath,
                     lineno=node.lineno,
@@ -152,6 +176,7 @@ def extract_all_imports(root: Path) -> list[ImportInfo]:
 
 
 # ── Dotted-path helpers ────────────────────────────────────────────────────
+
 
 def filepath_to_module(filepath: Path) -> str:
     """Convert a filesystem path to a dotted module path relative to ``src/``.
@@ -183,6 +208,7 @@ def is_submodule_of(import_path: str, parent: str) -> bool:
 
 # ── Violation collection helpers ───────────────────────────────────────────
 
+
 @dataclass
 class Violation:
     """A single architecture-rule violation."""
@@ -203,9 +229,7 @@ class ViolationCollector:
     violations: list[Violation] = field(default_factory=list)
 
     def add(self, rule: str, message: str, filepath: Path, lineno: int) -> None:
-        self.violations.append(
-            Violation(rule=rule, message=message, filepath=filepath, lineno=lineno)
-        )
+        self.violations.append(Violation(rule=rule, message=message, filepath=filepath, lineno=lineno))
 
     def assert_clean(self, header: str = "Architecture violations found") -> None:
         if not self.violations:

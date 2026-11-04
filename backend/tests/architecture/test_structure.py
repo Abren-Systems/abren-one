@@ -37,6 +37,7 @@ from tests.architecture.conftest import (
 
 # ── Helpers ────────────────────────────────────────────────────────────────
 
+
 def _all_registered_modules() -> list[tuple[str, Path]]:
     """Return ``(category, path)`` for every module in platform/ and modules/.
 
@@ -56,6 +57,7 @@ def _module_label(category: str, module_dir: Path) -> str:
 # ═══════════════════════════════════════════════════════════════════════════
 # Rule 1 — Every module has __init__.py and apps.py  (§9.3, Appendix A)
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class TestModuleRequiredFiles:
     """Every Python-package module must contain ``__init__.py`` and
@@ -105,6 +107,7 @@ class TestModuleRequiredFiles:
 # Rule 2 — Business modules have public.py  (§3.1, §9.3)
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 class TestBusinessModulesHavePublicPy:
     """Every module under ``modules/`` must have a ``public.py`` that
     defines the cross-module interface.
@@ -131,6 +134,7 @@ class TestBusinessModulesHavePublicPy:
 # ═══════════════════════════════════════════════════════════════════════════
 # Rule 3 — Every module has models/ or models.py  (§4.3, §9.3)
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class TestModulesHaveModels:
     """Each module must declare its model layer — either as a
@@ -164,6 +168,7 @@ class TestModulesHaveModels:
 # Rule 4 — Every module has tests/  (§9.1, §9.3)
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 class TestModulesHaveTests:
     """Each module must have a ``tests/`` directory for its unit,
     integration, and API tests.
@@ -173,9 +178,7 @@ class TestModulesHaveTests:
     def all_modules(self) -> list[tuple[str, Path]]:
         return _all_registered_modules()
 
-    def test_tests_directory_exists(
-        self, all_modules: list[tuple[str, Path]]
-    ) -> None:
+    def test_tests_directory_exists(self, all_modules: list[tuple[str, Path]]) -> None:
         collector = ViolationCollector()
         for category, module_dir in all_modules:
             tests_dir = module_dir / "tests"
@@ -197,6 +200,7 @@ class TestModulesHaveTests:
 # Rule 5 — models/__init__.py imports model classes  (§4.3)
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 class TestModelPackageInit:
     """When a module uses a ``models/`` package (not a single
     ``models.py``), its ``__init__.py`` must exist and should import model
@@ -207,9 +211,7 @@ class TestModelPackageInit:
     def all_modules(self) -> list[tuple[str, Path]]:
         return _all_registered_modules()
 
-    def test_models_init_exists(
-        self, all_modules: list[tuple[str, Path]]
-    ) -> None:
+    def test_models_init_exists(self, all_modules: list[tuple[str, Path]]) -> None:
         collector = ViolationCollector()
         for category, module_dir in all_modules:
             models_dir = module_dir / "models"
@@ -230,9 +232,7 @@ class TestModelPackageInit:
                 )
         collector.assert_clean("Model packages missing __init__.py")
 
-    def test_models_init_imports_models_when_model_files_exist(
-        self, all_modules: list[tuple[str, Path]]
-    ) -> None:
+    def test_models_init_imports_models_when_model_files_exist(self, all_modules: list[tuple[str, Path]]) -> None:
         """If the models/ package has any concrete ``.py`` files besides
         ``__init__.py``, the ``__init__.py`` should have ``import`` or
         ``from`` statements to re-export them.
@@ -249,11 +249,7 @@ class TestModelPackageInit:
                 continue
 
             # Count non-init .py files that contain class definitions
-            model_files = [
-                f
-                for f in models_dir.glob("*.py")
-                if f.name != "__init__.py" and _file_has_class(f)
-            ]
+            model_files = [f for f in models_dir.glob("*.py") if f.name != "__init__.py" and _file_has_class(f)]
             if not model_files:
                 continue  # bootstrap / empty — nothing to import yet
 
@@ -264,10 +260,7 @@ class TestModelPackageInit:
             except SyntaxError:
                 continue
 
-            has_imports = any(
-                isinstance(node, (ast.Import, ast.ImportFrom))
-                for node in ast.walk(tree)
-            )
+            has_imports = any(isinstance(node, (ast.Import, ast.ImportFrom)) for node in ast.walk(tree))
             if not has_imports:
                 file_names = ", ".join(f.name for f in model_files)
                 collector.add(
@@ -281,9 +274,7 @@ class TestModelPackageInit:
                     filepath=init_file,
                     lineno=0,
                 )
-        collector.assert_clean(
-            "Model package __init__.py must import model classes"
-        )
+        collector.assert_clean("Model package __init__.py must import model classes")
 
 
 def _file_has_class(filepath: Path) -> bool:
@@ -291,7 +282,7 @@ def _file_has_class(filepath: Path) -> bool:
     try:
         source = filepath.read_text(encoding="utf-8")
         tree = ast.parse(source, filename=str(filepath))
-    except (OSError, SyntaxError, UnicodeDecodeError):
+    except OSError, SyntaxError, UnicodeDecodeError:
         return False
     return any(isinstance(node, ast.ClassDef) for node in ast.walk(tree))
 
@@ -300,6 +291,7 @@ def _file_has_class(filepath: Path) -> bool:
 # Rule 6 — Application directories have commands/ and/or queries/
 #           (§6, Appendix A)
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class TestApplicationDirectoryStructure:
     """When a module has an ``application/`` directory with actual code,
@@ -312,9 +304,7 @@ class TestApplicationDirectoryStructure:
     def all_modules(self) -> list[tuple[str, Path]]:
         return _all_registered_modules()
 
-    def test_application_has_commands_or_queries(
-        self, all_modules: list[tuple[str, Path]]
-    ) -> None:
+    def test_application_has_commands_or_queries(self, all_modules: list[tuple[str, Path]]) -> None:
         collector = ViolationCollector()
         for category, module_dir in all_modules:
             app_dir = module_dir / "application"
@@ -322,11 +312,7 @@ class TestApplicationDirectoryStructure:
                 continue
 
             # Skip if application/ is essentially empty (bootstrap)
-            py_files = [
-                f
-                for f in app_dir.rglob("*.py")
-                if f.name != "__init__.py"
-            ]
+            py_files = [f for f in app_dir.rglob("*.py") if f.name != "__init__.py"]
             if not py_files:
                 continue
 
@@ -345,14 +331,13 @@ class TestApplicationDirectoryStructure:
                     filepath=app_dir,
                     lineno=0,
                 )
-        collector.assert_clean(
-            "Application directories should contain commands/ and/or queries/"
-        )
+        collector.assert_clean("Application directories should contain commands/ and/or queries/")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Additional structural checks
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class TestPlatformModulesStructure:
     """Platform modules follow the same basic structural requirements
@@ -369,10 +354,7 @@ class TestPlatformModulesStructure:
         actual = {d.name for d in discover_modules(platform_root)}
         missing = expected - actual
         if missing:
-            pytest.fail(
-                f"Expected platform modules not found: {sorted(missing)} "
-                f"(§2.4). Found: {sorted(actual)}"
-            )
+            pytest.fail(f"Expected platform modules not found: {sorted(missing)} (§2.4). Found: {sorted(actual)}")
 
 
 class TestBusinessModulesExist:
@@ -386,7 +368,4 @@ class TestBusinessModulesExist:
         actual = {d.name for d in discover_modules(modules_root)}
         missing = expected - actual
         if missing:
-            pytest.fail(
-                f"Expected business modules not found: {sorted(missing)} "
-                f"(§2.5). Found: {sorted(actual)}"
-            )
+            pytest.fail(f"Expected business modules not found: {sorted(missing)} (§2.5). Found: {sorted(actual)}")

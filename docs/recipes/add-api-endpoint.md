@@ -9,9 +9,11 @@
 ```python
 from rest_framework import serializers
 
+
 class CreateProgramSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
     description = serializers.CharField(required=False, default="")
+
 
 class ProgramResponseSerializer(serializers.Serializer):
     id = serializers.UUIDField()
@@ -73,7 +75,7 @@ urlpatterns = [
 
 ```python
 # config/urls.py
-path("api/v1/programs/", include("abren_one.modules.programs.interfaces.api.v1.urls")),
+(path("api/v1/programs/", include("abren_one.modules.programs.interfaces.api.v1.urls")),)
 ```
 
 ### 3. Write API tests

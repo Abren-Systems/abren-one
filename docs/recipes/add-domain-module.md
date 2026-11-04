@@ -21,6 +21,7 @@ find backend/src/abren_one/modules/$MODULE -type d -exec touch {}/__init__.py \;
 # backend/src/abren_one/modules/<name>/apps.py
 from django.apps import AppConfig
 
+
 class FundraisingConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
     name = "abren_one.modules.fundraising"
@@ -33,6 +34,7 @@ class FundraisingConfig(AppConfig):
 ```python
 # backend/src/abren_one/modules/<name>/public.py
 """Public interface for the Fundraising module."""
+
 __all__: list[str] = []
 ```
 

@@ -21,6 +21,7 @@ Every state-changing command is wrapped in `@transaction.atomic`:
 from django.db import transaction
 from abren_one.platform.common.context import ExecutionContext
 
+
 @transaction.atomic
 def execute(data: CreateOrganizationInput) -> CreateOrganizationResult:
     """
@@ -110,12 +111,13 @@ When a command in module A calls a published command in module B's `public.py`, 
 def execute(data: SomeComplexInput) -> SomeComplexResult:
     # 1. Local state change in module A
     local_record = MyModel.objects.create(...)
-    
+
     # 2. Cross-module command call (via public.py)
     #    This participates in the SAME transaction
     from abren_one.modules.other_module.public import some_command
+
     other_result = some_command.execute(other_input)
-    
+
     # 3. More local state changes
     #    If anything above fails, EVERYTHING rolls back
     ...
@@ -135,21 +137,22 @@ def execute(data: SomeComplexInput) -> SomeComplexResult:
 Django's `@transaction.atomic` creates savepoints when nested:
 
 ```python
-@transaction.atomic                    # Opens transaction
+@transaction.atomic  # Opens transaction
 def outer_command():
-    Model.objects.create(...)          # Write 1
+    Model.objects.create(...)  # Write 1
 
     try:
-        @transaction.atomic            # Creates SAVEPOINT
+
+        @transaction.atomic  # Creates SAVEPOINT
         def inner_operation():
             Model.objects.create(...)  # Write 2
-            raise SomeError()         # Rolls back to SAVEPOINT
-        
+            raise SomeError()  # Rolls back to SAVEPOINT
+
         inner_operation()
     except SomeError:
-        pass                           # Write 1 is preserved
+        pass  # Write 1 is preserved
 
-    Model.objects.create(...)          # Write 3
+    Model.objects.create(...)  # Write 3
     # COMMIT: Write 1 and Write 3 are committed; Write 2 was rolled back
 ```
 
@@ -201,11 +204,9 @@ def execute(data: UpdateRecordInput) -> UpdateRecordResult:
         field=data.new_value,
         version=F("version") + 1,
     )
-    
+
     if updated_count == 0:
-        raise ConcurrentModificationError(
-            "Record was modified by another operation"
-        )
+        raise ConcurrentModificationError("Record was modified by another operation")
 ```
 
 **Rules:**
@@ -293,12 +294,10 @@ def execute(data: ApproveGrantInput) -> ApproveGrantResult:
 @transaction.atomic
 def execute(data: InviteMemberInput) -> InviteMemberResult:
     membership = Membership.objects.create(...)
-    
+
     # Notification sent ONLY after successful commit
-    transaction.on_commit(
-        lambda: send_invitation_email.delay(membership.id)
-    )
-    
+    transaction.on_commit(lambda: send_invitation_email.delay(membership.id))
+
     return InviteMemberResult(membership_id=membership.id)
 ```
 

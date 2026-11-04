@@ -24,11 +24,15 @@ Use modern Python 3.10+ syntax — **do not** use `typing` equivalents:
 ```python
 # ✅ Correct
 def get_user(user_id: UUID) -> User | None: ...
+
+
 items: list[str] = []
 mapping: dict[str, int] = {}
 
 # ❌ Wrong — do not use Optional, List, Dict, Union
 from typing import Optional, List, Dict, Union
+
+
 def get_user(user_id: UUID) -> Optional[User]: ...
 ```
 
@@ -53,8 +57,8 @@ from abren_one.platform.common.context import ExecutionContext
 ```
 
 Rules:
-- **No wildcard imports** (`from module import *`)
-- **No relative imports** — use absolute imports from `abren_one`
+- **No wildcard imports** (`from module import *`) — except in Django environment settings files (`local.py`, `production.py`, `test.py`) which import `from .base import *` by Django convention.
+- **No relative imports** — use absolute imports from `abren_one` across platform and domain modules. Relative imports within the Django settings package or within a single immediate package (e.g. `from . import views` in `urls.py`) are permitted exceptions.
 - `public.py` files must define `__all__`
 
 ## Data Structures
@@ -66,6 +70,7 @@ Use frozen dataclasses for data transfer objects and value objects:
 ```python
 from dataclasses import dataclass
 from uuid import UUID
+
 
 @dataclass(frozen=True)
 class GetOrganizationResult:
@@ -82,6 +87,7 @@ Use `StrEnum` for enumerated values — not plain strings or `Enum`:
 ```python
 from enum import StrEnum
 
+
 class MembershipStatus(StrEnum):
     ACTIVE = "active"
     SUSPENDED = "suspended"
@@ -96,6 +102,7 @@ Use `UUID` (generated via `uuid.uuid4`) for all application-owned record identif
 import uuid
 from django.db import models
 
+
 class Organization(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 ```
@@ -107,6 +114,7 @@ class Organization(models.Model):
 ```python
 from decimal import Decimal
 from django.db import models
+
 
 class Donation(models.Model):
     amount = models.DecimalField(max_digits=15, decimal_places=2)

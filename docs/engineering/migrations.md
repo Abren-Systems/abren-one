@@ -61,14 +61,17 @@ uv run python backend/manage.py makemigrations <app_label> --empty --name popula
 # Example data migration
 from django.db import migrations
 
+
 def populate_slugs(apps, schema_editor):
     Branch = apps.get_model("organizations", "Branch")
     for branch in Branch.objects.filter(slug=""):
         branch.slug = branch.name.lower().replace(" ", "-")
         branch.save(update_fields=["slug"])
 
+
 def reverse_populate_slugs(apps, schema_editor):
     pass  # No meaningful reverse for this
+
 
 class Migration(migrations.Migration):
     dependencies = [

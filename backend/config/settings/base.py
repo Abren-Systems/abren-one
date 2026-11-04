@@ -50,7 +50,8 @@ PLATFORM_APPS = [
 ]
 
 MODULE_APPS: list[str] = [
-    # Business modules added here when they have models/migrations
+    "abren_one.modules.organizations",
+    "abren_one.modules.programs",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + PLATFORM_APPS + MODULE_APPS
@@ -159,6 +160,6 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
     ],
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.CursorPagination",
+    "DEFAULT_PAGINATION_CLASS": "abren_one.platform.common.pagination.StandardCursorPagination",
     "PAGE_SIZE": 50,
 }

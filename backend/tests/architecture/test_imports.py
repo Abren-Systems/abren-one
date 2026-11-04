@@ -38,6 +38,7 @@ from tests.architecture.conftest import (
 
 # ── Helpers ────────────────────────────────────────────────────────────────
 
+
 def _module_name_from_filepath(filepath: Path) -> str | None:
     """Return the business-module name that *filepath* belongs to, or None."""
     try:
@@ -81,14 +82,14 @@ def _is_internal_cross_module_import(
         return False, None
 
     # e.g. "abren_one.modules.organizations.domain.policies"
-    remainder = import_module[len(prefix):]  # "organizations.domain.policies"
+    remainder = import_module[len(prefix) :]  # "organizations.domain.policies"
     parts = remainder.split(".")
     if len(parts) < 2:
         # Importing the module root or its public.py — allowed
         return False, None
 
-    target_module = parts[0]          # "organizations"
-    target_subpackage = parts[1]      # "domain"
+    target_module = parts[0]  # "organizations"
+    target_subpackage = parts[1]  # "domain"
 
     # Same-module internal imports are perfectly fine
     if target_module == source_module_name:
@@ -104,6 +105,7 @@ def _is_internal_cross_module_import(
 # ═══════════════════════════════════════════════════════════════════════════
 # Rule 1 — Platform modules must NOT import business modules  (§2.2, §2.3)
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class TestPlatformDoesNotImportModules:
     """Platform code must never depend on business-module code.
@@ -125,14 +127,13 @@ class TestPlatformDoesNotImportModules:
                     filepath=imp.filepath,
                     lineno=imp.lineno,
                 )
-        collector.assert_clean(
-            "Platform modules must not import from abren_one.modules.*"
-        )
+        collector.assert_clean("Platform modules must not import from abren_one.modules.*")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Rule 2 — Business domain/application layers must NOT import DRF  (§2.2)
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class TestBusinessLayersDoNotImportDRF:
     """Domain and application layers must remain free of HTTP/DRF coupling.
@@ -154,10 +155,7 @@ class TestBusinessLayersDoNotImportDRF:
                 if not layer_dir.exists():
                     continue
                 for imp in extract_all_imports(layer_dir):
-                    if any(
-                        is_submodule_of(imp.module, pfx)
-                        for pfx in self._DRF_PREFIXES
-                    ):
+                    if any(is_submodule_of(imp.module, pfx) for pfx in self._DRF_PREFIXES):
                         collector.add(
                             rule="no-drf-in-domain-application",
                             message=(
@@ -169,14 +167,13 @@ class TestBusinessLayersDoNotImportDRF:
                             lineno=imp.lineno,
                         )
 
-        collector.assert_clean(
-            "Business module domain/application layers must not import DRF"
-        )
+        collector.assert_clean("Business module domain/application layers must not import DRF")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Rule 3 — Cross-module imports go through public.py only  (§2.3, §3.5)
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class TestCrossModuleImportsThroughPublic:
     """When module Y imports from module X, it must use
@@ -196,9 +193,7 @@ class TestCrossModuleImportsThroughPublic:
         for module_dir in discover_modules(modules_root):
             source_module = module_dir.name
             for imp in extract_all_imports(module_dir):
-                is_violation, target_module = _is_internal_cross_module_import(
-                    imp.module, source_module
-                )
+                is_violation, target_module = _is_internal_cross_module_import(imp.module, source_module)
                 if is_violation:
                     collector.add(
                         rule="cross-module-public-only",
@@ -213,14 +208,9 @@ class TestCrossModuleImportsThroughPublic:
                         lineno=imp.lineno,
                     )
 
-        collector.assert_clean(
-            "Cross-module imports must go through public.py, "
-            "not internal subpackages"
-        )
+        collector.assert_clean("Cross-module imports must go through public.py, not internal subpackages")
 
-    def test_platform_cross_module_imports_via_public(
-        self, platform_root: Path
-    ) -> None:
+    def test_platform_cross_module_imports_via_public(self, platform_root: Path) -> None:
         """Platform should not reach into module internals either (it
         shouldn't import modules at all — Rule 1 — but this catches the
         *specific* internal-import variant for completeness).
@@ -228,9 +218,7 @@ class TestCrossModuleImportsThroughPublic:
         collector = ViolationCollector()
 
         for imp in extract_all_imports(platform_root):
-            is_violation, target_module = _is_internal_cross_module_import(
-                imp.module, source_module_name=None
-            )
+            is_violation, target_module = _is_internal_cross_module_import(imp.module, source_module_name=None)
             if is_violation:
                 collector.add(
                     rule="platform-cross-module-public-only",
@@ -243,9 +231,7 @@ class TestCrossModuleImportsThroughPublic:
                     lineno=imp.lineno,
                 )
 
-        collector.assert_clean(
-            "Platform must not import module internals"
-        )
+        collector.assert_clean("Platform must not import module internals")
 
     def test_integrations_cross_module_imports_via_public(
         self,
@@ -258,9 +244,7 @@ class TestCrossModuleImportsThroughPublic:
         collector = ViolationCollector()
 
         for imp in extract_all_imports(integrations_root):
-            is_violation, target_module = _is_internal_cross_module_import(
-                imp.module, source_module_name=None
-            )
+            is_violation, target_module = _is_internal_cross_module_import(imp.module, source_module_name=None)
             if is_violation:
                 collector.add(
                     rule="integration-cross-module-public-only",
@@ -274,14 +258,13 @@ class TestCrossModuleImportsThroughPublic:
                     lineno=imp.lineno,
                 )
 
-        collector.assert_clean(
-            "Integration modules must not import module internals"
-        )
+        collector.assert_clean("Integration modules must not import module internals")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Rule 4 — Interface layers do NOT bypass the application layer  (§2.2)
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class TestInterfaceLayerDoesNotBypassApplication:
     """Views and serializers in ``interfaces/`` must call application
@@ -305,9 +288,7 @@ class TestInterfaceLayerDoesNotBypassApplication:
 
     _BYPASSED_LAYERS = {"domain", "models", "infrastructure"}
 
-    def test_no_direct_domain_or_model_imports_in_interfaces(
-        self, modules_root: Path
-    ) -> None:
+    def test_no_direct_domain_or_model_imports_in_interfaces(self, modules_root: Path) -> None:
         collector = ViolationCollector()
 
         for module_dir in discover_modules(modules_root):
@@ -321,7 +302,7 @@ class TestInterfaceLayerDoesNotBypassApplication:
             for imp in extract_all_imports(interfaces_dir):
                 if not imp.module.startswith(prefix):
                     continue  # importing outside the module — other rules apply
-                remainder = imp.module[len(prefix):]
+                remainder = imp.module[len(prefix) :]
                 top_subpackage = remainder.split(".")[0]
 
                 if top_subpackage in self._BYPASSED_LAYERS:
@@ -337,14 +318,13 @@ class TestInterfaceLayerDoesNotBypassApplication:
                         lineno=imp.lineno,
                     )
 
-        collector.assert_clean(
-            "Interface layers must not bypass the application layer"
-        )
+        collector.assert_clean("Interface layers must not bypass the application layer")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Rule 5 — No circular module-level dependencies  (§9.3)
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class TestNoCircularModuleDependencies:
     """Detect circular dependencies between business modules.
@@ -353,9 +333,7 @@ class TestNoCircularModuleDependencies:
     only cross-module abren_one.modules.* imports), then checks for cycles.
     """
 
-    def _build_dependency_graph(
-        self, modules_root: Path
-    ) -> dict[str, set[str]]:
+    def _build_dependency_graph(self, modules_root: Path) -> dict[str, set[str]]:
         """Return {source_module: {target_module, …}} graph."""
         graph: dict[str, set[str]] = {}
         prefix = "abren_one.modules."
@@ -368,7 +346,7 @@ class TestNoCircularModuleDependencies:
             for imp in extract_all_imports(module_dir):
                 if not imp.module.startswith(prefix):
                     continue
-                remainder = imp.module[len(prefix):]
+                remainder = imp.module[len(prefix) :]
                 target_name = remainder.split(".")[0]
                 if target_name != src_name:
                     graph[src_name].add(target_name)
@@ -410,9 +388,7 @@ class TestNoCircularModuleDependencies:
         cycles = self._find_cycles(graph)
 
         if cycles:
-            formatted = "\n".join(
-                f"  • {' → '.join(c)}" for c in cycles
-            )
+            formatted = "\n".join(f"  • {' → '.join(c)}" for c in cycles)
             pytest.fail(
                 f"Circular module dependencies detected (§9.3):\n{formatted}\n"
                 f"Break the cycle by using events, public interfaces, "
@@ -423,6 +399,7 @@ class TestNoCircularModuleDependencies:
 # ═══════════════════════════════════════════════════════════════════════════
 # Rule 6 — Application/domain layers must not import HTTP concepts  (§2.2)
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class TestApplicationDoesNotImportHTTP:
     """Application and domain layers must be free of HTTP-level concepts.
@@ -448,10 +425,7 @@ class TestApplicationDoesNotImportHTTP:
                 if not layer_dir.exists():
                     continue
                 for imp in extract_all_imports(layer_dir):
-                    if any(
-                        is_submodule_of(imp.module, http_mod)
-                        for http_mod in self._HTTP_MODULES
-                    ):
+                    if any(is_submodule_of(imp.module, http_mod) for http_mod in self._HTTP_MODULES):
                         collector.add(
                             rule="no-http-in-domain-application",
                             message=(
@@ -464,14 +438,13 @@ class TestApplicationDoesNotImportHTTP:
                             lineno=imp.lineno,
                         )
 
-        collector.assert_clean(
-            "Domain/application layers must not import HTTP modules"
-        )
+        collector.assert_clean("Domain/application layers must not import HTTP modules")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Rule 7 — Models/infrastructure must not import DRF  (§2.2)
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class TestModelsDoNotImportDRF:
     """Model and infrastructure layers must not depend on DRF."""
@@ -500,6 +473,29 @@ class TestModelsDoNotImportDRF:
                             lineno=imp.lineno,
                         )
 
-        collector.assert_clean(
-            "Models/infrastructure must not import rest_framework"
+        collector.assert_clean("Models/infrastructure must not import rest_framework")
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Rule 8 — Relative import resolution integrity
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class TestRelativeImportResolution:
+    """Verify that relative imports are resolved and cannot circumvent boundaries."""
+
+    def test_relative_import_resolution_detects_prohibited_cross_module(self, tmp_path: Path) -> None:
+        from tests.architecture.conftest import extract_imports
+
+        fake_file = (
+            tmp_path / "backend" / "src" / "abren_one" / "modules" / "programs" / "application" / "commands" / "fake.py"
         )
+        fake_file.parent.mkdir(parents=True)
+        fake_file.write_text("from ....organizations.domain import policies\n")
+
+        imports = extract_imports(fake_file)
+        assert len(imports) == 1
+        assert imports[0].module == "abren_one.modules.organizations.domain"
+        is_violation, target = _is_internal_cross_module_import(imports[0].module, "programs")
+        assert is_violation is True
+        assert target == "organizations"

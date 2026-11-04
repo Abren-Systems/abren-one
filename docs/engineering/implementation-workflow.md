@@ -54,9 +54,11 @@ class CreateBranchInput:
     name: str
     # ...
 
+
 @dataclass(frozen=True)
 class CreateBranchResult:
     branch_id: UUID
+
 
 @transaction.atomic
 def execute(data: CreateBranchInput) -> CreateBranchResult:
@@ -81,8 +83,8 @@ class GetBranchResult:
     name: str
     # ...
 
-def execute(*, branch_id: UUID, organization_id: UUID) -> GetBranchResult:
-    ...
+
+def execute(*, branch_id: UUID, organization_id: UUID) -> GetBranchResult: ...
 ```
 
 See [Add Query recipe](../recipes/add-query.md).
