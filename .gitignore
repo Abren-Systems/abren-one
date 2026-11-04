@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+
+# uv
+.uv/
+
+# Django
+db.sqlite3
+db.sqlite3-journal
+*.log
+media/
+staticfiles/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing / Linting
+.pytest_cache/
+.ruff_cache/
+.import_linter_cache/
+.mypy_cache/
+.pyright/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Node / Frontend (future)
+node_modules/
+frontend/dist/
+
+# OS
+Thumbs.db
