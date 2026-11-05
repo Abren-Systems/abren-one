@@ -23,7 +23,6 @@ from django.apps import AppConfig
 
 
 class FundraisingConfig(AppConfig):
-    default_auto_field = "django.db.models.BigAutoField"
     name = "abren_one.modules.fundraising"
     label = "fundraising"
     verbose_name = "Fundraising"
@@ -48,11 +47,41 @@ MODULE_APPS = [
 ]
 ```
 
-### 6. Create module documentation
+### 6. Update architecture enforcement
 
-Create `docs/modules/fundraising/module.md` with purpose, ownership, and public interface.
+**Import-linter contracts** — add to `pyproject.toml`:
 
-### 7. Verify
+```toml
+# Layer direction for the new module
+[[tool.importlinter.contracts]]
+name = "<Module> internal layer direction"
+type = "layers"
+layers = [
+    "abren_one.modules.<name>.interfaces",
+    "abren_one.modules.<name>.application",
+    "abren_one.modules.<name>.domain",
+]
+
+# Add domain/application to the DRF-forbidden contract
+# In the existing "Business domain/application layers do not import DRF" contract,
+# append to source_modules:
+#     "abren_one.modules.<name>.domain",
+#     "abren_one.modules.<name>.application",
+```
+
+**Architecture tests** — update `backend/tests/architecture/test_structure.py`:
+
+- Add the new module name to the `expected` set in `TestBusinessModulesExist.test_initial_business_modules`.
+
+### 7. Create module documentation
+
+Create `docs/modules/<name>/module.md` with purpose, ownership, and public interface.
+
+### 8. Update agent instructions
+
+If the module introduces new conventions or dependencies, update `backend/AGENTS.md`.
+
+### 9. Verify
 
 ```bash
 uv run python backend/manage.py check --settings=config.settings.local
@@ -63,9 +92,13 @@ uv run lint-imports
 ## Checklist
 
 - [ ] Directory structure matches convention
-- [ ] `apps.py` has correct `name` and `label`
+- [ ] `apps.py` has correct `name` and `label` (no `default_auto_field` — inherited from settings)
 - [ ] `public.py` exists
-- [ ] Registered in `INSTALLED_APPS`
+- [ ] Registered in `INSTALLED_APPS` (`MODULE_APPS` in `base.py`)
+- [ ] Import-linter layer contract added
+- [ ] DRF-forbidden contract updated with new domain/application paths
+- [ ] `TestBusinessModulesExist` expected set updated
 - [ ] Module documentation created
+- [ ] `backend/AGENTS.md` updated if needed
 - [ ] Architecture tests pass
 - [ ] Import-linter contracts pass

@@ -55,11 +55,15 @@ def execute(data: CreateProgramInput) -> CreateProgramResult:
 
 ```python
 from abren_one.modules.programs.application.commands.create_program import (
-    create_program,
+    execute as create_program,
     CreateProgramInput,
     CreateProgramResult,
 )
 ```
+
+> **Convention:** Command/query modules define `execute()` as the entry
+> point. When re-exporting through `public.py`, alias to a descriptive
+> name using `execute as <verb>_<entity>`.
 
 ### 4. Write tests
 

@@ -79,7 +79,7 @@ source_modules = ["abren_one.platform"]
 forbidden_modules = ["abren_one.modules"]
 
 [[tool.importlinter.contracts]]
-name = "Business modules do not import DRF"
+name = "Business domain/application layers do not import DRF"
 type = "forbidden"
 source_modules = [
     "abren_one.modules.organizations.domain",

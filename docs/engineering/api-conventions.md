@@ -21,6 +21,22 @@ A DRF view does **exactly** this:
 4. Call the application command or query
 5. Return the serialized result
 
+## ExecutionContext Construction
+
+Every view constructs an `ExecutionContext` before calling the application layer:
+
+```python
+from abren_one.platform.common.context import ActorType, ExecutionContext
+
+context = ExecutionContext(
+    actor_type=ActorType.USER,
+    actor_id=request.user.id,
+    organization_id=request.org_context.organization_id,
+    correlation_id=request.correlation_id,
+)
+result = execute(CreateProgramInput(context=context, ...))
+```
+
 ## What Views Must NOT Contain
 
 - Business rule validation beyond input format

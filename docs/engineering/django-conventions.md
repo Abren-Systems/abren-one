@@ -10,7 +10,7 @@
 
 - One Django app per meaningful domain module
 - `AppConfig` in `apps.py` with explicit `name` and `label`
-- Register in `INSTALLED_APPS` only when the app has models/migrations
+- Register in `INSTALLED_APPS` when the app is created — Django needs the app label registered for string-based FK references to resolve and for `AppConfig` to be discovered
 
 ## Models
 

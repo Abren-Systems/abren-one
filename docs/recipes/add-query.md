@@ -40,10 +40,14 @@ def execute(*, organization_id: UUID, program_id: UUID) -> GetProgramResult:
 
 ```python
 from abren_one.modules.programs.application.queries.get_program import (
-    get_program,
+    execute as get_program,
     GetProgramResult,
 )
 ```
+
+> **Convention:** Query modules define `execute()` as the entry point.
+> When re-exporting through `public.py`, alias to a descriptive name
+> using `execute as <verb>_<entity>`.
 
 ## Rules
 
