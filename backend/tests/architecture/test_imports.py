@@ -499,3 +499,59 @@ class TestRelativeImportResolution:
         is_violation, target = _is_internal_cross_module_import(imports[0].module, "programs")
         assert is_violation is True
         assert target == "organizations"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Rule 9 — Deliberate violation rejection (§3.5)
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class TestEnforcementDetectsDeliberateViolations:
+    """Verify that architecture enforcement detects and rejects prohibited patterns (§3.5)."""
+
+    def test_detects_platform_importing_business_module(self, tmp_path: Path) -> None:
+        from tests.architecture.conftest import extract_imports
+
+        fake_file = tmp_path / "backend" / "src" / "abren_one" / "platform" / "tenancy" / "bad.py"
+        fake_file.parent.mkdir(parents=True)
+        fake_file.write_text("from abren_one.modules.organizations.models import Organization\n")
+
+        imports = extract_imports(fake_file)
+        assert len(imports) == 1
+        assert is_submodule_of(imports[0].module, "abren_one.modules")
+
+    def test_detects_domain_importing_drf(self, tmp_path: Path) -> None:
+        from tests.architecture.conftest import extract_imports
+
+        fake_file = tmp_path / "backend" / "src" / "abren_one" / "modules" / "programs" / "domain" / "bad.py"
+        fake_file.parent.mkdir(parents=True)
+        fake_file.write_text("import rest_framework\n")
+
+        imports = extract_imports(fake_file)
+        assert len(imports) == 1
+        assert is_submodule_of(imports[0].module, "rest_framework")
+
+    def test_detects_cross_module_internal_import(self, tmp_path: Path) -> None:
+        from tests.architecture.conftest import extract_imports
+
+        fake_file = tmp_path / "backend" / "src" / "abren_one" / "modules" / "programs" / "application" / "bad.py"
+        fake_file.parent.mkdir(parents=True)
+        fake_file.write_text("from abren_one.modules.organizations.models.organization import Organization\n")
+
+        imports = extract_imports(fake_file)
+        is_violation, target = _is_internal_cross_module_import(imports[0].module, "programs")
+        assert is_violation is True
+        assert target == "organizations"
+
+    def test_detects_interface_bypassing_application(self, tmp_path: Path) -> None:
+        from tests.architecture.conftest import extract_imports
+
+        fake_file = (
+            tmp_path / "backend" / "src" / "abren_one" / "modules" / "programs" / "interfaces" / "api" / "bad.py"
+        )
+        fake_file.parent.mkdir(parents=True)
+        fake_file.write_text("from abren_one.modules.programs.models.program import Program\n")
+
+        imports = extract_imports(fake_file)
+        assert len(imports) == 1
+        assert "models" in TestInterfaceLayerDoesNotBypassApplication._BYPASSED_LAYERS

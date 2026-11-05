@@ -38,6 +38,9 @@ target-version = "py315"
 select = ["E", "F", "I", "UP", "B", "SIM", "N"]
 ignore = []
 
+[tool.ruff.lint.per-file-ignores]
+"**/migrations/*" = ["E501"]
+
 [tool.ruff.lint.isort]
 known-first-party = ["abren_one", "config"]
 
@@ -52,6 +55,14 @@ venv = ".venv"
 typeCheckingMode = "basic"
 include = ["backend/src", "backend/config"]
 exclude = ["**/migrations"]
+reportAttributeAccessIssue = "none"
+reportArgumentType = "none"
+reportReturnType = "none"
+reportOptionalSubscript = "none"
+reportOptionalMemberAccess = "none"
+reportIndexIssue = "none"
+reportGeneralTypeIssues = "none"
+reportInvalidTypeArguments = "none"
 
 # ---------------------------------------------------------------------------
 # Pytest

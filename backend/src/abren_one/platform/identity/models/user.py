@@ -23,3 +23,6 @@ class User(AbstractUser):
 
     class Meta:
         db_table = "identity_user"
+
+    def __str__(self) -> str:
+        return self.username or str(self.id)
