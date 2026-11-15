@@ -3,6 +3,11 @@ from abren_one.modules.programs.domain.exceptions import (
     ProgramNotFoundError,
     ProjectNotFoundError,
 )
+from abren_one.modules.programs.domain.policies import (
+    can_transition_activity_status,
+    can_transition_program_status,
+    can_transition_project_status,
+)
 from abren_one.modules.programs.domain.value_objects import (
     ActivityStatus,
     ProgramStatus,
@@ -16,4 +21,7 @@ __all__ = [
     "ProgramStatus",
     "ProjectNotFoundError",
     "ProjectStatus",
+    "can_transition_activity_status",
+    "can_transition_program_status",
+    "can_transition_project_status",
 ]

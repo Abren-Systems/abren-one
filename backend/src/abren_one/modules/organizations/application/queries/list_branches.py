@@ -7,6 +7,7 @@ from abren_one.modules.organizations.models import Branch
 @dataclass(frozen=True)
 class BranchSummaryResult:
     id: UUID
+    organization_id: UUID
     name: str
     code: str
     is_headquarters: bool
@@ -19,6 +20,7 @@ def execute(*, organization_id: UUID) -> list[BranchSummaryResult]:
     return [
         BranchSummaryResult(
             id=b.id,
+            organization_id=b.organization_id,
             name=b.name,
             code=b.code,
             is_headquarters=b.is_headquarters,

@@ -48,7 +48,8 @@ class RecordDonationResult:
 @transaction.atomic
 def execute(data: RecordDonationInput) -> RecordDonationResult:
     """Record a monetary donation received from a supporter (§6.2, §Appendix B)."""
-    assert data.context.organization_id is not None, "Organization context is required."
+    if data.context.organization_id is None:
+        raise FundraisingError("Organization context is required.")
     org_id = data.context.organization_id
 
     org = get_organization(organization_id=org_id)

@@ -13,6 +13,7 @@ from abren_one.modules.programs.application.commands.create_program import (
 from abren_one.modules.programs.application.exceptions import (
     ProgramError,
     ProgramNotFoundError,
+    ProjectNotFoundError,
 )
 from abren_one.modules.programs.application.queries.get_program import (
     GetProgramResult,
@@ -34,6 +35,7 @@ __all__ = [
     "ProgramError",
     "ProgramNotFoundError",
     "ProgramSummaryResult",
+    "ProjectNotFoundError",
     "create_program",
     "get_program",
     "list_programs",

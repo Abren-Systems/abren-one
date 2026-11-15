@@ -105,6 +105,51 @@ class TestOrganizationsAPI:
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
+    def test_non_admin_cannot_mutate_memberships(self) -> None:
+        org = Organization.objects.create(name="Role Org Mutate", slug="role-org-mutate")
+        Membership.objects.create(organization=org, user=self.user, role="member", status="active")
+        target_user = User.objects.create_user(username="target_user", password="password")
+        target_membership = Membership.objects.create(
+            organization=org,
+            user=target_user,
+            role="member",
+            status="active",
+        )
+
+        # Suspend attempt by regular member is denied
+        suspend_resp = self.client.post(
+            f"/api/v1/organizations/members/{target_membership.id}/suspend/",
+            HTTP_X_ORGANIZATION_ID=str(org.id),
+        )
+        assert suspend_resp.status_code == status.HTTP_403_FORBIDDEN
+
+        # Activate attempt by regular member is denied
+        activate_resp = self.client.post(
+            f"/api/v1/organizations/members/{target_membership.id}/activate/",
+            HTTP_X_ORGANIZATION_ID=str(org.id),
+        )
+        assert activate_resp.status_code == status.HTTP_403_FORBIDDEN
+
+        # Revoke attempt by regular member is denied
+        revoke_resp = self.client.post(
+            f"/api/v1/organizations/members/{target_membership.id}/revoke/",
+            HTTP_X_ORGANIZATION_ID=str(org.id),
+        )
+        assert revoke_resp.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_branch_response_includes_organization_id(self) -> None:
+        org = Organization.objects.create(name="Branch Org", slug="branch-org")
+        Membership.objects.create(organization=org, user=self.user, role="owner", status="active")
+        Branch.objects.create(organization=org, name="Main Branch", code="MB-1")
+
+        response = self.client.get(
+            "/api/v1/organizations/branches/",
+            HTTP_X_ORGANIZATION_ID=str(org.id),
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 1
+        assert response.data[0]["organization_id"] == str(org.id)
+
     def test_provision_duplicate_slug_returns_400(self) -> None:
         Organization.objects.create(name="Existing NGO", slug="existing-ngo")
         response = self.client.post(

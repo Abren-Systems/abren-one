@@ -6,6 +6,7 @@ from django.db import transaction
 from abren_one.modules.organizations.domain.exceptions import (
     CannotRevokeLastOwnerError,
     MembershipNotFoundError,
+    OrganizationError,
 )
 from abren_one.modules.organizations.domain.policies import can_revoke_membership
 from abren_one.modules.organizations.domain.value_objects import (
@@ -36,10 +37,11 @@ def execute(data: RevokeMembershipInput) -> RevokeMembershipResult:
     - Target membership must belong to the active organization.
     - Cannot revoke the last active owner of the organization.
     """
-    assert data.context.organization_id is not None, "Organization context is required."
+    if data.context.organization_id is None:
+        raise OrganizationError("Organization context is required.")
 
     try:
-        membership = Membership.objects.get(
+        membership = Membership.objects.select_for_update().get(
             id=data.membership_id,
             organization_id=data.context.organization_id,
         )
@@ -48,11 +50,15 @@ def execute(data: RevokeMembershipInput) -> RevokeMembershipResult:
 
     role = MembershipRole(membership.role)
     if role == MembershipRole.OWNER:
-        active_owners = Membership.objects.filter(
-            organization_id=data.context.organization_id,
-            role=MembershipRole.OWNER.value,
-            status=MembershipStatus.ACTIVE.value,
-        ).count()
+        active_owners = len(
+            list(
+                Membership.objects.select_for_update().filter(
+                    organization_id=data.context.organization_id,
+                    role=MembershipRole.OWNER.value,
+                    status=MembershipStatus.ACTIVE.value,
+                )
+            )
+        )
         if not can_revoke_membership(role, active_owners):
             raise CannotRevokeLastOwnerError("Cannot revoke the last active owner of an organization.")
 

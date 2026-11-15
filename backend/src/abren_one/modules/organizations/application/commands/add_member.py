@@ -34,7 +34,8 @@ class AddMemberResult:
 @transaction.atomic
 def execute(data: AddMemberInput) -> AddMemberResult:
     """Add a member to the organization (§5.1, §5.2)."""
-    assert data.context.organization_id is not None, "Organization context is required."
+    if data.context.organization_id is None:
+        raise OrganizationError("Organization context is required.")
 
     org = Organization.objects.get(id=data.context.organization_id)
     try:

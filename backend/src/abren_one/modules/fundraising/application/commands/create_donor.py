@@ -33,7 +33,8 @@ class CreateDonorResult:
 @transaction.atomic
 def execute(data: CreateDonorInput) -> CreateDonorResult:
     """Create a new donor in the active organization (§6.2)."""
-    assert data.context.organization_id is not None, "Organization context is required."
+    if data.context.organization_id is None:
+        raise FundraisingError("Organization context is required.")
     org_id = data.context.organization_id
 
     org = get_organization(organization_id=org_id)

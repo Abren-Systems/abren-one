@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import date
 from uuid import UUID
 
 from abren_one.modules.programs.domain.exceptions import ProgramNotFoundError
@@ -13,6 +14,8 @@ class GetProgramResult:
     description: str
     status: str
     is_active: bool
+    start_date: date | None = None
+    end_date: date | None = None
 
 
 def execute(*, organization_id: UUID, program_id: UUID) -> GetProgramResult:
@@ -29,4 +32,6 @@ def execute(*, organization_id: UUID, program_id: UUID) -> GetProgramResult:
         description=prog.description,
         status=prog.status,
         is_active=prog.is_active,
+        start_date=prog.start_date,
+        end_date=prog.end_date,
     )

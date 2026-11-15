@@ -41,7 +41,11 @@ def get_membership_verifier() -> MembershipVerifier | None:
 
 
 def verify_user_membership(user_id: UUID, organization_id: UUID) -> MembershipInfo | None:
-    """Look up membership using the registered verifier."""
+    """Look up membership using the registered verifier.
+
+    Returns None when the user has no membership or if no verifier has been registered,
+    ensuring fail-closed access (§5.4, §5.5).
+    """
     if _verifier is None:
         return None
     return _verifier.get_membership(user_id=user_id, organization_id=organization_id)

@@ -93,3 +93,36 @@ class TestBuildExecutionContext:
         assert context.actor_id == user_id
         assert context.organization_id == org_id
         assert context.correlation_id == request.correlation_id
+
+    def test_authenticated_staff_or_superuser_is_administrator(self) -> None:
+        factory = RequestFactory()
+        user_id = uuid.uuid4()
+        request = factory.get("/")
+        request.user = SimpleNamespace(is_authenticated=True, id=user_id, is_staff=True, is_superuser=False)
+        request.correlation_id = uuid.uuid4()
+
+        context = build_execution_context(request)
+        assert context.actor_type == ActorType.ADMINISTRATOR
+        assert context.actor_id == user_id
+
+    def test_system_actor_detected(self) -> None:
+        factory = RequestFactory()
+        request = factory.get("/")
+        request.user = SimpleNamespace(is_authenticated=False)
+        request.is_system = True
+        request.correlation_id = uuid.uuid4()
+
+        context = build_execution_context(request)
+        assert context.actor_type == ActorType.SYSTEM
+        assert context.actor_id is None
+
+    def test_integration_actor_detected(self) -> None:
+        factory = RequestFactory()
+        request = factory.get("/")
+        request.user = SimpleNamespace(is_authenticated=False)
+        request.is_integration = True
+        request.correlation_id = uuid.uuid4()
+
+        context = build_execution_context(request)
+        assert context.actor_type == ActorType.INTEGRATION
+        assert context.actor_id is None

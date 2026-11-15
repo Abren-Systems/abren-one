@@ -1,7 +1,7 @@
 import uuid
 
 from rest_framework import status
-from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -150,16 +150,17 @@ class MemberListCreateView(APIView):
 
     permission_classes = [IsAuthenticated, HasOrganizationContext]
 
+    def get_permissions(self):
+        perms = [IsAuthenticated(), HasOrganizationContext()]
+        if self.request and self.request.method == "POST":
+            perms.append(require_role("owner", "admin")())
+        return perms
+
     def get(self, request: Request) -> Response:
         members = list_members(organization_id=request.org_context.organization_id)
         return Response(MemberResponseSerializer(members, many=True).data)
 
     def post(self, request: Request) -> Response:
-        # Adding a member requires Admin or Owner role
-        role_perm = require_role("owner", "admin")()
-        if not role_perm.has_permission(request, self):
-            raise PermissionDenied("Only organization owners and admins can add members.")
-
         serializer = AddMemberRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -179,7 +180,7 @@ class MemberListCreateView(APIView):
 
 
 class ActivateMemberView(APIView):
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    permission_classes = [IsAuthenticated, HasOrganizationContext, require_role("owner", "admin")]
 
     def post(self, request: Request, membership_id: uuid.UUID) -> Response:
         context = build_execution_context(request)
@@ -194,7 +195,7 @@ class ActivateMemberView(APIView):
 
 
 class SuspendMemberView(APIView):
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    permission_classes = [IsAuthenticated, HasOrganizationContext, require_role("owner", "admin")]
 
     def post(self, request: Request, membership_id: uuid.UUID) -> Response:
         context = build_execution_context(request)
@@ -209,7 +210,7 @@ class SuspendMemberView(APIView):
 
 
 class RevokeMemberView(APIView):
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    permission_classes = [IsAuthenticated, HasOrganizationContext, require_role("owner", "admin")]
 
     def post(self, request: Request, membership_id: uuid.UUID) -> Response:
         context = build_execution_context(request)

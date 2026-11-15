@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import date
 from uuid import UUID
 
 from django.db import transaction
@@ -16,6 +17,8 @@ class CreateProgramInput:
     context: ExecutionContext
     name: str
     description: str = ""
+    start_date: date | None = None
+    end_date: date | None = None
 
 
 @dataclass(frozen=True)
@@ -31,7 +34,8 @@ def execute(data: CreateProgramInput) -> CreateProgramResult:
     Validates that the organization exists and is active using the Organizations
     module's public query `get_organization` via `public.py`.
     """
-    assert data.context.organization_id is not None, "Organization context is required."
+    if data.context.organization_id is None:
+        raise ProgramError("Organization context is required.")
 
     org = get_organization(organization_id=data.context.organization_id)
     if not org.is_active:
@@ -45,6 +49,8 @@ def execute(data: CreateProgramInput) -> CreateProgramResult:
         name=data.name,
         description=data.description,
         status=ProgramStatus.ACTIVE.value,
+        start_date=data.start_date,
+        end_date=data.end_date,
     )
 
     record_audit_event(

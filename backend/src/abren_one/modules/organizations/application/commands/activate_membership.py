@@ -29,10 +29,11 @@ class ActivateMembershipResult:
 @transaction.atomic
 def execute(data: ActivateMembershipInput) -> ActivateMembershipResult:
     """Activate an invited or suspended membership (§5.2)."""
-    assert data.context.organization_id is not None, "Organization context is required."
+    if data.context.organization_id is None:
+        raise OrganizationError("Organization context is required.")
 
     try:
-        membership = Membership.objects.get(
+        membership = Membership.objects.select_for_update().get(
             id=data.membership_id,
             organization_id=data.context.organization_id,
         )

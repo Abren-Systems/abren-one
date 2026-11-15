@@ -49,7 +49,7 @@ def execute(data: CreateOrganizationInput) -> CreateOrganizationResult:
     )
 
     # Founding user receives Owner membership
-    if data.context.actor_type == ActorType.USER and data.context.actor_id:
+    if data.context.actor_type in (ActorType.USER, ActorType.ADMINISTRATOR) and data.context.actor_id:
         Membership.objects.create(
             organization=org,
             user_id=data.context.actor_id,

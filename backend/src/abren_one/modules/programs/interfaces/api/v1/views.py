@@ -52,6 +52,8 @@ class ProgramListCreateView(APIView):
                     context=context,
                     name=serializer.validated_data["name"],
                     description=serializer.validated_data.get("description", ""),
+                    start_date=serializer.validated_data.get("start_date"),
+                    end_date=serializer.validated_data.get("end_date"),
                 )
             )
         except ProgramError as exc:

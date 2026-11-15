@@ -25,7 +25,8 @@ class CreateDepartmentResult:
 @transaction.atomic
 def execute(data: CreateDepartmentInput) -> CreateDepartmentResult:
     """Create a department within the active organization."""
-    assert data.context.organization_id is not None, "Organization context is required."
+    if data.context.organization_id is None:
+        raise OrganizationError("Organization context is required.")
 
     org = Organization.objects.get(id=data.context.organization_id)
     if Department.objects.filter(organization=org, code=data.code).exists():

@@ -49,6 +49,22 @@ def build_execution_context(request: Any) -> ExecutionContext:
     """
     user = getattr(request, "user", None)
     actor_id: UUID | None = None
+    explicit_actor_type = getattr(request, "actor_type", None)
+
+    if explicit_actor_type is not None:
+        actor_type = ActorType(explicit_actor_type)
+    elif user and getattr(user, "is_authenticated", False):
+        if getattr(user, "is_superuser", False) or getattr(user, "is_staff", False):
+            actor_type = ActorType.ADMINISTRATOR
+        else:
+            actor_type = ActorType.USER
+    elif getattr(request, "is_system", False):
+        actor_type = ActorType.SYSTEM
+    elif getattr(request, "is_integration", False):
+        actor_type = ActorType.INTEGRATION
+    else:
+        actor_type = ActorType.USER
+
     if user and getattr(user, "is_authenticated", False):
         actor_id = getattr(user, "id", None)
 
@@ -59,7 +75,7 @@ def build_execution_context(request: Any) -> ExecutionContext:
     correlation_id: UUID = getattr(request, "correlation_id", None) or uuid.uuid4()
 
     return ExecutionContext(
-        actor_type=ActorType.USER,
+        actor_type=actor_type,
         actor_id=actor_id,
         organization_id=org_id,
         correlation_id=correlation_id,

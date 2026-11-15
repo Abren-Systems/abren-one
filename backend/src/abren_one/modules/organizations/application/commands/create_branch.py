@@ -25,7 +25,8 @@ class CreateBranchResult:
 @transaction.atomic
 def execute(data: CreateBranchInput) -> CreateBranchResult:
     """Create a branch within the active organization (§5.3)."""
-    assert data.context.organization_id is not None, "Organization context is required."
+    if data.context.organization_id is None:
+        raise OrganizationError("Organization context is required.")
 
     org = Organization.objects.get(id=data.context.organization_id)
     if Branch.objects.filter(organization=org, code=data.code).exists():

@@ -41,7 +41,12 @@ class TestProgramsAPI:
         # Create program
         create_resp = self.client.post(
             "/api/v1/programs/",
-            {"name": "Clean Water Project", "description": "Well construction"},
+            {
+                "name": "Clean Water Project",
+                "description": "Well construction",
+                "start_date": "2026-01-01",
+                "end_date": "2026-12-31",
+            },
             format="json",
             HTTP_X_ORGANIZATION_ID=str(self.org_id),
         )
@@ -64,6 +69,8 @@ class TestProgramsAPI:
         )
         assert detail_resp.status_code == status.HTTP_200_OK
         assert detail_resp.data["name"] == "Clean Water Project"
+        assert detail_resp.data["start_date"] == "2026-01-01"
+        assert detail_resp.data["end_date"] == "2026-12-31"
 
     def test_cross_tenant_program_isolation(self) -> None:
         """Negative cross-tenant test (§5.6):

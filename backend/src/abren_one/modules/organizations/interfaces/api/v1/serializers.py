@@ -22,6 +22,7 @@ class CreateBranchRequestSerializer(serializers.Serializer):
 
 class BranchResponseSerializer(serializers.Serializer):
     id = serializers.UUIDField()
+    organization_id = serializers.UUIDField()
     name = serializers.CharField()
     code = serializers.CharField()
     is_headquarters = serializers.BooleanField()
