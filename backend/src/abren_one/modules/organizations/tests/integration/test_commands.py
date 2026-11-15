@@ -21,6 +21,12 @@ from abren_one.modules.organizations.application.commands.create_branch import (
 from abren_one.modules.organizations.application.commands.create_branch import (
     execute as create_branch,
 )
+from abren_one.modules.organizations.application.commands.create_department import (
+    CreateDepartmentInput,
+)
+from abren_one.modules.organizations.application.commands.create_department import (
+    execute as create_department,
+)
 from abren_one.modules.organizations.application.commands.create_organization import (
     CreateOrganizationInput,
 )
@@ -215,3 +221,37 @@ class TestOrganizationCommandsAndQueries:
                     membership_id=owner_membership_id,
                 )
             )
+
+    def test_create_department_with_and_without_branch(self) -> None:
+        user = User.objects.create_user(username="dept_founder", password="password123")
+        ctx = ExecutionContext(
+            actor_type=ActorType.USER,
+            actor_id=user.id,
+            organization_id=None,
+            correlation_id=uuid.uuid4(),
+        )
+        org = create_organization(CreateOrganizationInput(context=ctx, name="Dept Org", slug="dept-org"))
+        tenant_ctx = ExecutionContext(
+            actor_type=ActorType.USER,
+            actor_id=user.id,
+            organization_id=org.organization_id,
+            correlation_id=uuid.uuid4(),
+        )
+
+        branch = create_branch(CreateBranchInput(context=tenant_ctx, name="Branch A", code="BRA", is_headquarters=True))
+
+        dept1 = create_department(
+            CreateDepartmentInput(context=tenant_ctx, name="Finance", code="FIN", branch_id=branch.branch_id)
+        )
+        assert dept1.department_id is not None
+
+        dept2 = create_department(
+            CreateDepartmentInput(context=tenant_ctx, name="Operations", code="OPS", branch_id=None)
+        )
+        assert dept2.department_id is not None
+
+        with pytest.raises(OrganizationError, match="already exists"):
+            create_department(CreateDepartmentInput(context=tenant_ctx, name="Finance 2", code="FIN", branch_id=None))
+
+        assert AuditEvent.objects.filter(action="department.created", target_id=dept1.department_id).exists()
+        assert AuditEvent.objects.filter(action="department.created", target_id=dept2.department_id).exists()

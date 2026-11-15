@@ -50,6 +50,19 @@ class TestMembershipStatusTransitions:
     def test_revoked_is_terminal(self) -> None:
         assert can_transition_membership_status(MembershipStatus.REVOKED, MembershipStatus.ACTIVE) is False
 
+    @pytest.mark.parametrize(
+        ("current", "target"),
+        [
+            (MembershipStatus.ACTIVE, MembershipStatus.INVITED),
+            (MembershipStatus.SUSPENDED, MembershipStatus.INVITED),
+            (MembershipStatus.REVOKED, MembershipStatus.INVITED),
+            (MembershipStatus.REVOKED, MembershipStatus.ACTIVE),
+            (MembershipStatus.REVOKED, MembershipStatus.SUSPENDED),
+        ],
+    )
+    def test_disallowed_membership_transitions(self, current: MembershipStatus, target: MembershipStatus) -> None:
+        assert can_transition_membership_status(current, target) is False
+
 
 class TestMembershipRevocationSafety:
     def test_cannot_revoke_last_owner(self) -> None:

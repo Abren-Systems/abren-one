@@ -28,31 +28,56 @@ All models use UUID primary keys and include `created_at` / `updated_at` timesta
 
 Other modules import **only** from this file.
 
-### Planned Exports (Stage 3)
+### Public Exports
 
 | Export | Type | Description |
 |--------|------|-------------|
+| `create_program` | Command | Create a program for the active organization. |
 | `list_programs` | Query | List programs for the active organization. Returns a list of `ProgramSummaryResult`. |
-| `get_program` | Query | Retrieve a specific program by ID. Returns `ProgramDetailResult`. |
-| `ProgramSummaryResult` | DTO | Frozen dataclass with `id`, `name`, `status`, `organization_id`. |
-| `ProgramDetailResult` | DTO | Frozen dataclass with full program details including project count. |
+| `get_program` | Query | Retrieve a specific program by ID. Returns `GetProgramResult`. |
+| `CreateProgramInput` | DTO | Input DTO with execution context and program fields. |
+| `CreateProgramResult` | DTO | Result DTO with program ID. |
+| `ProgramSummaryResult` | DTO | Frozen dataclass with `id`, `organization_id`, `name`, `status`, `is_active`. |
+| `GetProgramResult` | DTO | Frozen dataclass with full program details. |
+| `ProgramError` | Exception | Base domain/application error. |
+| `ProgramNotFoundError` | Exception | Program not found error. |
 
 ```python
-# Example public.py (Stage 3)
-from abren_one.modules.programs.application.queries.list_programs import (
-    list_programs,
-    ProgramSummaryResult,
+# Example public.py
+from abren_one.modules.programs.application.commands.create_program import (
+    CreateProgramInput,
+    CreateProgramResult,
+)
+from abren_one.modules.programs.application.commands.create_program import (
+    execute as create_program,
+)
+from abren_one.modules.programs.application.exceptions import (
+    ProgramError,
+    ProgramNotFoundError,
 )
 from abren_one.modules.programs.application.queries.get_program import (
-    get_program,
-    ProgramDetailResult,
+    GetProgramResult,
+)
+from abren_one.modules.programs.application.queries.get_program import (
+    execute as get_program,
+)
+from abren_one.modules.programs.application.queries.list_programs import (
+    ProgramSummaryResult,
+)
+from abren_one.modules.programs.application.queries.list_programs import (
+    execute as list_programs,
 )
 
 __all__ = [
-    "list_programs",
+    "CreateProgramInput",
+    "CreateProgramResult",
+    "GetProgramResult",
+    "ProgramError",
+    "ProgramNotFoundError",
     "ProgramSummaryResult",
+    "create_program",
     "get_program",
-    "ProgramDetailResult",
+    "list_programs",
 ]
 ```
 

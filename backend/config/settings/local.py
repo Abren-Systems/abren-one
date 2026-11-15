@@ -26,11 +26,15 @@ DATABASES = {
 }
 
 # ---------------------------------------------------------------------------
-# Django Debug Toolbar
+# Django Debug Toolbar (optional dev dependency)
 # ---------------------------------------------------------------------------
-INSTALLED_APPS += ["debug_toolbar"]  # noqa: F405
+try:
+    import debug_toolbar  # noqa: F401
 
-MIDDLEWARE += ["debug_toolbar.middleware.DebugToolbarMiddleware"]  # noqa: F405
+    INSTALLED_APPS += ["debug_toolbar"]  # noqa: F405
+    MIDDLEWARE += ["debug_toolbar.middleware.DebugToolbarMiddleware"]  # noqa: F405
+except ImportError:
+    pass
 
 INTERNAL_IPS = ["127.0.0.1"]
 

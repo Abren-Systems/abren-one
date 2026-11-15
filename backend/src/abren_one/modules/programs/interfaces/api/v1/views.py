@@ -28,18 +28,8 @@ from abren_one.modules.programs.interfaces.api.v1.serializers import (
     ProgramDetailResponseSerializer,
     ProgramSummaryResponseSerializer,
 )
-from abren_one.platform.common.context import ActorType, ExecutionContext
+from abren_one.platform.common.context import build_execution_context
 from abren_one.platform.tenancy.permissions import HasOrganizationContext
-
-
-def _build_context(request: Request) -> ExecutionContext:
-    org_id = getattr(request.org_context, "organization_id", None) if hasattr(request, "org_context") else None
-    return ExecutionContext(
-        actor_type=ActorType.USER,
-        actor_id=request.user.id if request.user and request.user.is_authenticated else None,
-        organization_id=org_id,
-        correlation_id=getattr(request, "correlation_id", uuid.uuid4()),
-    )
 
 
 class ProgramListCreateView(APIView):
@@ -55,7 +45,7 @@ class ProgramListCreateView(APIView):
         serializer = CreateProgramRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        context = _build_context(request)
+        context = build_execution_context(request)
         try:
             result = create_program(
                 CreateProgramInput(

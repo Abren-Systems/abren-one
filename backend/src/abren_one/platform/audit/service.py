@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from django.db import transaction
+from django.db import connection, transaction
 
 from abren_one.platform.audit.models import AuditEvent
 
@@ -49,11 +49,27 @@ def record_security_event(
     outcome: str = "denied",
     metadata: dict[str, Any] | None = None,
 ) -> AuditEvent:
-    """Record a denied or failed security event independently (§8.4).
+    """Record a denied or failed security event independently (§8.4, ADR-005).
 
-    Must be committed independently so that if a business transaction
-    rolls back, this security/audit record survives.
+    When called outside an active transaction (e.g. from middleware, DRF permission
+    checks, or API views), it uses durable=True to commit immediately. When called
+    within an active transaction, durable=True is avoided to prevent RuntimeError,
+    and the event is written within the current block (see ADR-005 for future
+    out-of-band / dedicated connection audit routing).
     """
+    if connection.in_atomic_block:
+        return AuditEvent.objects.create(
+            actor_type=actor_type,
+            actor_id=actor_id,
+            organization_id=organization_id,
+            action=action,
+            target_type=target_type,
+            target_id=target_id,
+            correlation_id=correlation_id,
+            outcome=outcome,
+            metadata=metadata or {},
+        )
+
     with transaction.atomic(durable=True):
         return AuditEvent.objects.create(
             actor_type=actor_type,

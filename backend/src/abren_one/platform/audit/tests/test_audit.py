@@ -2,6 +2,7 @@ import uuid
 
 import pytest
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
 
 from abren_one.platform.audit.service import record_audit_event, record_security_event
 
@@ -66,3 +67,20 @@ class TestAuditEventModel:
         )
         assert event.outcome == "denied"
         assert event.metadata["reason"] == "membership_inactive"
+
+    def test_record_security_event_inside_atomic_block_does_not_crash(self) -> None:
+        """Verify record_security_event does not raise RuntimeError inside atomic block (C1, ADR-005)."""
+        with transaction.atomic():
+            event = record_security_event(
+                actor_type="system",
+                actor_id=None,
+                organization_id=uuid.uuid4(),
+                action="organization.unauthorized_attempt",
+                target_type="organizations.Organization",
+                target_id=uuid.uuid4(),
+                correlation_id=uuid.uuid4(),
+                outcome="denied",
+                metadata={"reason": "permission_denied"},
+            )
+            assert event.outcome == "denied"
+            assert event.action == "organization.unauthorized_attempt"

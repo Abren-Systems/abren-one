@@ -12,7 +12,13 @@ class TimestampMixin(models.Model):
 
 
 class OrgOwnedMixin(models.Model):
-    """Records that belong to a specific organization."""
+    """Records that belong to a specific organization.
+
+    Note: Uses `related_name="+"` intentionally (§3.1, §4.4).
+    In a modular monolith, business modules must not access other modules'
+    entities via reverse ORM relationships (which would bypass public.py).
+    Disabling reverse relationships ensures strict module encapsulation.
+    """
 
     organization = models.ForeignKey(
         "organizations.Organization",

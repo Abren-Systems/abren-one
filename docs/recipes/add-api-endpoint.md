@@ -29,8 +29,12 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from abren_one.platform.common.context import ExecutionContext, ActorType
-from abren_one.modules.programs.application.commands import create_program
+from abren_one.platform.common.context import build_execution_context
+from abren_one.platform.tenancy.permissions import HasOrganizationContext
+from abren_one.modules.programs.application.commands.create_program import (
+    CreateProgramInput,
+    execute as create_program,
+)
 
 
 class CreateProgramView(APIView):
@@ -40,15 +44,9 @@ class CreateProgramView(APIView):
         serializer = CreateProgramSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        context = ExecutionContext(
-            actor_type=ActorType.USER,
-            actor_id=request.user.id,
-            organization_id=request.org_context.organization_id,
-            correlation_id=request.correlation_id,
-        )
-
-        result = create_program.execute(
-            create_program.CreateProgramInput(
+        context = build_execution_context(request)
+        result = create_program(
+            CreateProgramInput(
                 context=context,
                 **serializer.validated_data,
             )

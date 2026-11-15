@@ -104,3 +104,13 @@ class TestOrganizationsAPI:
             HTTP_X_ORGANIZATION_ID=str(org.id),
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_provision_duplicate_slug_returns_400(self) -> None:
+        Organization.objects.create(name="Existing NGO", slug="existing-ngo")
+        response = self.client.post(
+            "/api/v1/organizations/",
+            {"name": "Another NGO", "slug": "existing-ngo"},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "already exists" in str(response.data)

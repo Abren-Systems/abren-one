@@ -23,18 +23,26 @@ A DRF view does **exactly** this:
 
 ## ExecutionContext Construction
 
-Every view constructs an `ExecutionContext` before calling the application layer:
+Every view constructs an `ExecutionContext` using the shared platform helper before calling the application layer:
+
+```python
+from abren_one.platform.common.context import build_execution_context
+
+context = build_execution_context(request)
+result = execute(CreateProgramInput(context=context, ...))
+```
+
+If manual construction is required:
 
 ```python
 from abren_one.platform.common.context import ActorType, ExecutionContext
 
 context = ExecutionContext(
     actor_type=ActorType.USER,
-    actor_id=request.user.id,
-    organization_id=request.org_context.organization_id,
-    correlation_id=request.correlation_id,
+    actor_id=request.user.id if request.user.is_authenticated else None,
+    organization_id=getattr(request.org_context, "organization_id", None),
+    correlation_id=getattr(request, "correlation_id", uuid.uuid4()),
 )
-result = execute(CreateProgramInput(context=context, ...))
 ```
 
 ## What Views Must NOT Contain

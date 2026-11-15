@@ -1,7 +1,7 @@
 import uuid
 
 from rest_framework import status
-from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -68,18 +68,8 @@ from abren_one.modules.organizations.interfaces.api.v1.serializers import (
     OrganizationResponseSerializer,
 )
 from abren_one.platform.authorization.permissions import require_role
-from abren_one.platform.common.context import ActorType, ExecutionContext
+from abren_one.platform.common.context import build_execution_context
 from abren_one.platform.tenancy.permissions import HasOrganizationContext
-
-
-def _build_context(request: Request) -> ExecutionContext:
-    org_id = getattr(request.org_context, "organization_id", None) if hasattr(request, "org_context") else None
-    return ExecutionContext(
-        actor_type=ActorType.USER,
-        actor_id=request.user.id if request.user and request.user.is_authenticated else None,
-        organization_id=org_id,
-        correlation_id=getattr(request, "correlation_id", uuid.uuid4()),
-    )
 
 
 class ProvisionOrganizationView(APIView):
@@ -94,7 +84,7 @@ class ProvisionOrganizationView(APIView):
         serializer = CreateOrganizationRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        context = _build_context(request)
+        context = build_execution_context(request)
         try:
             result = create_organization(
                 CreateOrganizationInput(
@@ -139,7 +129,7 @@ class BranchListCreateView(APIView):
         serializer = CreateBranchRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        context = _build_context(request)
+        context = build_execution_context(request)
         try:
             result = create_branch(
                 CreateBranchInput(
@@ -168,15 +158,12 @@ class MemberListCreateView(APIView):
         # Adding a member requires Admin or Owner role
         role_perm = require_role("owner", "admin")()
         if not role_perm.has_permission(request, self):
-            return Response(
-                {"detail": "Only organization owners and admins can add members."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+            raise PermissionDenied("Only organization owners and admins can add members.")
 
         serializer = AddMemberRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        context = _build_context(request)
+        context = build_execution_context(request)
         try:
             result = add_member(
                 AddMemberInput(
@@ -195,7 +182,7 @@ class ActivateMemberView(APIView):
     permission_classes = [IsAuthenticated, HasOrganizationContext]
 
     def post(self, request: Request, membership_id: uuid.UUID) -> Response:
-        context = _build_context(request)
+        context = build_execution_context(request)
         try:
             result = activate_membership(ActivateMembershipInput(context=context, membership_id=membership_id))
         except MembershipNotFoundError as exc:
@@ -210,7 +197,7 @@ class SuspendMemberView(APIView):
     permission_classes = [IsAuthenticated, HasOrganizationContext]
 
     def post(self, request: Request, membership_id: uuid.UUID) -> Response:
-        context = _build_context(request)
+        context = build_execution_context(request)
         try:
             result = suspend_membership(SuspendMembershipInput(context=context, membership_id=membership_id))
         except MembershipNotFoundError as exc:
@@ -225,7 +212,7 @@ class RevokeMemberView(APIView):
     permission_classes = [IsAuthenticated, HasOrganizationContext]
 
     def post(self, request: Request, membership_id: uuid.UUID) -> Response:
-        context = _build_context(request)
+        context = build_execution_context(request)
         try:
             result = revoke_membership(RevokeMembershipInput(context=context, membership_id=membership_id))
         except MembershipNotFoundError as exc:
