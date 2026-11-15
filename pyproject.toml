@@ -97,6 +97,8 @@ source_modules = [
     "abren_one.modules.organizations.application",
     "abren_one.modules.programs.domain",
     "abren_one.modules.programs.application",
+    "abren_one.modules.fundraising.domain",
+    "abren_one.modules.fundraising.application",
 ]
 forbidden_modules = ["rest_framework"]
 
@@ -116,4 +118,13 @@ layers = [
     "abren_one.modules.programs.interfaces",
     "abren_one.modules.programs.application",
     "abren_one.modules.programs.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "Fundraising internal layer direction"
+type = "layers"
+layers = [
+    "abren_one.modules.fundraising.interfaces",
+    "abren_one.modules.fundraising.application",
+    "abren_one.modules.fundraising.domain",
 ]

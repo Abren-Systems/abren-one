@@ -52,6 +52,7 @@ PLATFORM_APPS = [
 MODULE_APPS: list[str] = [
     "abren_one.modules.organizations",
     "abren_one.modules.programs",
+    "abren_one.modules.fundraising",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + PLATFORM_APPS + MODULE_APPS
