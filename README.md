@@ -20,19 +20,16 @@
 git clone <repo-url> && cd abren-one
 uv sync
 
-# Run Django checks
+# Run all validation gates (CI parity)
+./scripts/validate.sh
+
+# Or run individual checks
 uv run python backend/manage.py check --settings=config.settings.local
-
-# Run tests
 uv run pytest
-
-# Run architecture enforcement
 uv run lint-imports
-uv run pytest backend/tests/architecture/ -p no:django
-
-# Lint and format
 uv run ruff check .
 uv run ruff format .
+uv run pyright
 ```
 
 ## Architecture
