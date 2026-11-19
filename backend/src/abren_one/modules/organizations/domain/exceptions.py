@@ -1,8 +1,11 @@
-class OrganizationError(Exception):
+from abren_one.platform.common.exceptions import DomainError, NotFoundError
+
+
+class OrganizationError(DomainError):
     """Base exception for all domain errors within the organizations module."""
 
 
-class OrganizationNotFoundError(OrganizationError):
+class OrganizationNotFoundError(NotFoundError, OrganizationError):
     """Raised when an organization cannot be found."""
 
 
@@ -10,7 +13,7 @@ class OrganizationSuspendedError(OrganizationError):
     """Raised when an operation is attempted against a suspended organization."""
 
 
-class MembershipNotFoundError(OrganizationError):
+class MembershipNotFoundError(NotFoundError, OrganizationError):
     """Raised when a user membership cannot be found."""
 
 

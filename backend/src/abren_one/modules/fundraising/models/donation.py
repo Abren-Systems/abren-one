@@ -1,6 +1,7 @@
 import uuid
 
 from django.db import models
+from django.db.models import Q
 
 from abren_one.modules.fundraising.domain.value_objects import (
     DonationStatus,
@@ -45,6 +46,12 @@ class Donation(OrgOwnedMixin, TimestampMixin, models.Model):
     class Meta:
         db_table = "fundraising_donations"
         ordering = ["-received_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(amount__gt=0),
+                name="donation_amount_positive",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"Donation {self.id}: {self.amount} {self.currency} from {self.donor.name}"

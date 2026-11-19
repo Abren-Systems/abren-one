@@ -282,7 +282,7 @@ def _file_has_class(filepath: Path) -> bool:
     try:
         source = filepath.read_text(encoding="utf-8")
         tree = ast.parse(source, filename=str(filepath))
-    except (OSError, SyntaxError, UnicodeDecodeError):
+    except OSError, SyntaxError, UnicodeDecodeError:
         return False
     return any(isinstance(node, ast.ClassDef) for node in ast.walk(tree))
 

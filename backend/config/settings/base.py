@@ -165,4 +165,5 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "abren_one.platform.common.pagination.StandardCursorPagination",
     "PAGE_SIZE": 50,
+    "EXCEPTION_HANDLER": "abren_one.platform.common.exception_handler.handle_domain_exception",
 }

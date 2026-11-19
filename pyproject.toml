@@ -128,3 +128,9 @@ layers = [
     "abren_one.modules.fundraising.application",
     "abren_one.modules.fundraising.domain",
 ]
+
+# Cross-module public.py enforcement is handled by the architecture pytest
+# tests in backend/tests/architecture/test_imports.py (Rule 3) via AST
+# analysis — import-linter's "forbidden" contract type does not support the
+# glob patterns needed to whitelist same-module internal imports.
+# Both pytest and lint-imports run as mandatory CI gates.

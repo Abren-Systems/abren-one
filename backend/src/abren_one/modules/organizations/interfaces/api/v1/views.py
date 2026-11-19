@@ -1,7 +1,6 @@
 import uuid
 
 from rest_framework import status
-from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -43,13 +42,6 @@ from abren_one.modules.organizations.application.commands.suspend_membership imp
 from abren_one.modules.organizations.application.commands.suspend_membership import (
     execute as suspend_membership,
 )
-from abren_one.modules.organizations.application.exceptions import (
-    CannotRevokeLastOwnerError,
-    DuplicateMembershipError,
-    MembershipNotFoundError,
-    OrganizationError,
-    OrganizationNotFoundError,
-)
 from abren_one.modules.organizations.application.queries.get_organization import (
     execute as get_organization,
 )
@@ -85,16 +77,13 @@ class ProvisionOrganizationView(APIView):
         serializer.is_valid(raise_exception=True)
 
         context = build_execution_context(request)
-        try:
-            result = create_organization(
-                CreateOrganizationInput(
-                    context=context,
-                    name=serializer.validated_data["name"],
-                    slug=serializer.validated_data["slug"],
-                )
+        result = create_organization(
+            CreateOrganizationInput(
+                context=context,
+                name=serializer.validated_data["name"],
+                slug=serializer.validated_data["slug"],
             )
-        except OrganizationError as exc:
-            raise ValidationError({"error": str(exc)}) from exc
+        )
 
         return Response(
             {"organization_id": str(result.organization_id), "slug": result.slug},
@@ -108,11 +97,7 @@ class CurrentOrganizationDetailView(APIView):
     permission_classes = [IsAuthenticated, HasOrganizationContext]
 
     def get(self, request: Request) -> Response:
-        try:
-            result = get_organization(organization_id=request.org_context.organization_id)
-        except OrganizationNotFoundError as exc:
-            raise NotFound(str(exc)) from exc
-
+        result = get_organization(organization_id=request.org_context.organization_id)
         return Response(OrganizationResponseSerializer(result).data)
 
 
@@ -130,17 +115,14 @@ class BranchListCreateView(APIView):
         serializer.is_valid(raise_exception=True)
 
         context = build_execution_context(request)
-        try:
-            result = create_branch(
-                CreateBranchInput(
-                    context=context,
-                    name=serializer.validated_data["name"],
-                    code=serializer.validated_data["code"],
-                    is_headquarters=serializer.validated_data.get("is_headquarters", False),
-                )
+        result = create_branch(
+            CreateBranchInput(
+                context=context,
+                name=serializer.validated_data["name"],
+                code=serializer.validated_data["code"],
+                is_headquarters=serializer.validated_data.get("is_headquarters", False),
             )
-        except OrganizationError as exc:
-            raise ValidationError({"error": str(exc)}) from exc
+        )
 
         return Response({"branch_id": str(result.branch_id)}, status=status.HTTP_201_CREATED)
 
@@ -165,16 +147,13 @@ class MemberListCreateView(APIView):
         serializer.is_valid(raise_exception=True)
 
         context = build_execution_context(request)
-        try:
-            result = add_member(
-                AddMemberInput(
-                    context=context,
-                    user_id=serializer.validated_data["user_id"],
-                    role=serializer.validated_data["role"],
-                )
+        result = add_member(
+            AddMemberInput(
+                context=context,
+                user_id=serializer.validated_data["user_id"],
+                role=serializer.validated_data["role"],
             )
-        except (DuplicateMembershipError, OrganizationError) as exc:
-            raise ValidationError({"error": str(exc)}) from exc
+        )
 
         return Response({"membership_id": str(result.membership_id)}, status=status.HTTP_201_CREATED)
 
@@ -184,13 +163,7 @@ class ActivateMemberView(APIView):
 
     def post(self, request: Request, membership_id: uuid.UUID) -> Response:
         context = build_execution_context(request)
-        try:
-            result = activate_membership(ActivateMembershipInput(context=context, membership_id=membership_id))
-        except MembershipNotFoundError as exc:
-            raise NotFound(str(exc)) from exc
-        except OrganizationError as exc:
-            raise ValidationError({"error": str(exc)}) from exc
-
+        result = activate_membership(ActivateMembershipInput(context=context, membership_id=membership_id))
         return Response({"membership_id": str(result.membership_id), "status": result.status})
 
 
@@ -199,13 +172,7 @@ class SuspendMemberView(APIView):
 
     def post(self, request: Request, membership_id: uuid.UUID) -> Response:
         context = build_execution_context(request)
-        try:
-            result = suspend_membership(SuspendMembershipInput(context=context, membership_id=membership_id))
-        except MembershipNotFoundError as exc:
-            raise NotFound(str(exc)) from exc
-        except OrganizationError as exc:
-            raise ValidationError({"error": str(exc)}) from exc
-
+        result = suspend_membership(SuspendMembershipInput(context=context, membership_id=membership_id))
         return Response({"membership_id": str(result.membership_id), "status": result.status})
 
 
@@ -214,13 +181,5 @@ class RevokeMemberView(APIView):
 
     def post(self, request: Request, membership_id: uuid.UUID) -> Response:
         context = build_execution_context(request)
-        try:
-            result = revoke_membership(RevokeMembershipInput(context=context, membership_id=membership_id))
-        except MembershipNotFoundError as exc:
-            raise NotFound(str(exc)) from exc
-        except CannotRevokeLastOwnerError as exc:
-            raise ValidationError({"error": str(exc)}) from exc
-        except OrganizationError as exc:
-            raise ValidationError({"error": str(exc)}) from exc
-
+        result = revoke_membership(RevokeMembershipInput(context=context, membership_id=membership_id))
         return Response({"membership_id": str(result.membership_id), "status": "revoked"})

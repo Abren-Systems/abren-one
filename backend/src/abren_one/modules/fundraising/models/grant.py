@@ -1,6 +1,7 @@
 import uuid
 
 from django.db import models
+from django.db.models import F, Q
 
 from abren_one.modules.fundraising.domain.value_objects import GrantStatus
 from abren_one.platform.common.models import OrgOwnedMixin, TimestampMixin
@@ -36,7 +37,15 @@ class Grant(OrgOwnedMixin, TimestampMixin, models.Model):
             models.UniqueConstraint(
                 fields=["organization", "reference_code"],
                 name="unique_organization_grant_reference",
-            )
+            ),
+            models.CheckConstraint(
+                condition=Q(total_amount__gte=0),
+                name="grant_total_amount_non_negative",
+            ),
+            models.CheckConstraint(
+                condition=Q(end_date__gte=F("start_date")),
+                name="grant_end_date_gte_start_date",
+            ),
         ]
 
     def __str__(self) -> str:

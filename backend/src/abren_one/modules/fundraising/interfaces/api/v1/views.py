@@ -1,7 +1,6 @@
 import uuid
 
 from rest_framework import status
-from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -24,11 +23,6 @@ from abren_one.modules.fundraising.application.commands.record_donation import (
 )
 from abren_one.modules.fundraising.application.commands.record_donation import (
     execute as record_donation,
-)
-from abren_one.modules.fundraising.application.exceptions import (
-    DonorNotFoundError,
-    FundraisingError,
-    GrantNotFoundError,
 )
 from abren_one.modules.fundraising.application.queries.get_donor import (
     execute as get_donor,
@@ -71,18 +65,15 @@ class DonorListCreateView(APIView):
         serializer.is_valid(raise_exception=True)
 
         context = build_execution_context(request)
-        try:
-            result = create_donor(
-                CreateDonorInput(
-                    context=context,
-                    name=serializer.validated_data["name"],
-                    donor_type=serializer.validated_data.get("donor_type", "individual"),
-                    email=serializer.validated_data.get("email", ""),
-                    phone=serializer.validated_data.get("phone", ""),
-                )
+        result = create_donor(
+            CreateDonorInput(
+                context=context,
+                name=serializer.validated_data["name"],
+                donor_type=serializer.validated_data.get("donor_type", "individual"),
+                email=serializer.validated_data.get("email", ""),
+                phone=serializer.validated_data.get("phone", ""),
             )
-        except FundraisingError as exc:
-            raise ValidationError({"error": str(exc)}) from exc
+        )
 
         return Response({"donor_id": str(result.donor_id)}, status=status.HTTP_201_CREATED)
 
@@ -93,11 +84,7 @@ class DonorDetailView(APIView):
     permission_classes = [IsAuthenticated, HasOrganizationContext]
 
     def get(self, request: Request, donor_id: uuid.UUID) -> Response:
-        try:
-            donor = get_donor(donor_id=donor_id, organization_id=request.org_context.organization_id)
-        except DonorNotFoundError as exc:
-            raise NotFound(str(exc)) from exc
-
+        donor = get_donor(donor_id=donor_id, organization_id=request.org_context.organization_id)
         return Response(DonorResponseSerializer(donor).data)
 
 
@@ -117,24 +104,19 @@ class GrantListCreateView(APIView):
         serializer.is_valid(raise_exception=True)
 
         context = build_execution_context(request)
-        try:
-            result = create_grant(
-                CreateGrantInput(
-                    context=context,
-                    donor_id=serializer.validated_data["donor_id"],
-                    title=serializer.validated_data["title"],
-                    reference_code=serializer.validated_data["reference_code"],
-                    total_amount=serializer.validated_data["total_amount"],
-                    currency=serializer.validated_data.get("currency", "USD"),
-                    start_date=serializer.validated_data["start_date"],
-                    end_date=serializer.validated_data["end_date"],
-                    program_id=serializer.validated_data.get("program_id"),
-                )
+        result = create_grant(
+            CreateGrantInput(
+                context=context,
+                donor_id=serializer.validated_data["donor_id"],
+                title=serializer.validated_data["title"],
+                reference_code=serializer.validated_data["reference_code"],
+                total_amount=serializer.validated_data["total_amount"],
+                currency=serializer.validated_data.get("currency", "USD"),
+                start_date=serializer.validated_data["start_date"],
+                end_date=serializer.validated_data["end_date"],
+                program_id=serializer.validated_data.get("program_id"),
             )
-        except DonorNotFoundError as exc:
-            raise NotFound(str(exc)) from exc
-        except FundraisingError as exc:
-            raise ValidationError({"error": str(exc)}) from exc
+        )
 
         return Response({"grant_id": str(result.grant_id)}, status=status.HTTP_201_CREATED)
 
@@ -145,11 +127,7 @@ class GrantDetailView(APIView):
     permission_classes = [IsAuthenticated, HasOrganizationContext]
 
     def get(self, request: Request, grant_id: uuid.UUID) -> Response:
-        try:
-            grant = get_grant(grant_id=grant_id, organization_id=request.org_context.organization_id)
-        except GrantNotFoundError as exc:
-            raise NotFound(str(exc)) from exc
-
+        grant = get_grant(grant_id=grant_id, organization_id=request.org_context.organization_id)
         return Response(GrantResponseSerializer(grant).data)
 
 
@@ -169,23 +147,18 @@ class DonationListCreateView(APIView):
         serializer.is_valid(raise_exception=True)
 
         context = build_execution_context(request)
-        try:
-            result = record_donation(
-                RecordDonationInput(
-                    context=context,
-                    donor_id=serializer.validated_data["donor_id"],
-                    amount=serializer.validated_data["amount"],
-                    currency=serializer.validated_data.get("currency", "USD"),
-                    payment_method=serializer.validated_data.get("payment_method", "bank_transfer"),
-                    reference=serializer.validated_data.get("reference", ""),
-                    grant_id=serializer.validated_data.get("grant_id"),
-                    program_id=serializer.validated_data.get("program_id"),
-                    received_at=serializer.validated_data.get("received_at"),
-                )
+        result = record_donation(
+            RecordDonationInput(
+                context=context,
+                donor_id=serializer.validated_data["donor_id"],
+                amount=serializer.validated_data["amount"],
+                currency=serializer.validated_data.get("currency", "USD"),
+                payment_method=serializer.validated_data.get("payment_method", "bank_transfer"),
+                reference=serializer.validated_data.get("reference", ""),
+                grant_id=serializer.validated_data.get("grant_id"),
+                program_id=serializer.validated_data.get("program_id"),
+                received_at=serializer.validated_data.get("received_at"),
             )
-        except (DonorNotFoundError, GrantNotFoundError) as exc:
-            raise NotFound(str(exc)) from exc
-        except FundraisingError as exc:
-            raise ValidationError({"error": str(exc)}) from exc
+        )
 
         return Response({"donation_id": str(result.donation_id)}, status=status.HTTP_201_CREATED)

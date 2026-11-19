@@ -42,7 +42,7 @@ class CorrelationMiddleware:
         if raw_id:
             try:
                 return UUID(raw_id.strip())
-            except (ValueError, AttributeError):
+            except ValueError, AttributeError:
                 pass
 
         return uuid4()

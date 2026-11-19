@@ -1,7 +1,6 @@
 import uuid
 
 from rest_framework import status
-from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -12,10 +11,6 @@ from abren_one.modules.programs.application.commands.create_program import (
 )
 from abren_one.modules.programs.application.commands.create_program import (
     execute as create_program,
-)
-from abren_one.modules.programs.application.exceptions import (
-    ProgramError,
-    ProgramNotFoundError,
 )
 from abren_one.modules.programs.application.queries.get_program import (
     execute as get_program,
@@ -46,18 +41,15 @@ class ProgramListCreateView(APIView):
         serializer.is_valid(raise_exception=True)
 
         context = build_execution_context(request)
-        try:
-            result = create_program(
-                CreateProgramInput(
-                    context=context,
-                    name=serializer.validated_data["name"],
-                    description=serializer.validated_data.get("description", ""),
-                    start_date=serializer.validated_data.get("start_date"),
-                    end_date=serializer.validated_data.get("end_date"),
-                )
+        result = create_program(
+            CreateProgramInput(
+                context=context,
+                name=serializer.validated_data["name"],
+                description=serializer.validated_data.get("description", ""),
+                start_date=serializer.validated_data.get("start_date"),
+                end_date=serializer.validated_data.get("end_date"),
             )
-        except ProgramError as exc:
-            raise ValidationError({"error": str(exc)}) from exc
+        )
 
         return Response({"program_id": str(result.program_id)}, status=status.HTTP_201_CREATED)
 
@@ -68,12 +60,8 @@ class ProgramDetailView(APIView):
     permission_classes = [IsAuthenticated, HasOrganizationContext]
 
     def get(self, request: Request, program_id: uuid.UUID) -> Response:
-        try:
-            result = get_program(
-                organization_id=request.org_context.organization_id,
-                program_id=program_id,
-            )
-        except ProgramNotFoundError as exc:
-            raise NotFound(str(exc)) from exc
-
+        result = get_program(
+            organization_id=request.org_context.organization_id,
+            program_id=program_id,
+        )
         return Response(ProgramDetailResponseSerializer(result).data)

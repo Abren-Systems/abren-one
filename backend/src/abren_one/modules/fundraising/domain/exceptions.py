@@ -1,16 +1,19 @@
-class FundraisingError(Exception):
+from abren_one.platform.common.exceptions import DomainError, NotFoundError
+
+
+class FundraisingError(DomainError):
     """Base domain exception for the Fundraising module."""
 
 
-class DonorNotFoundError(FundraisingError):
+class DonorNotFoundError(NotFoundError, FundraisingError):
     """Raised when a donor cannot be found within the active organization."""
 
 
-class GrantNotFoundError(FundraisingError):
+class GrantNotFoundError(NotFoundError, FundraisingError):
     """Raised when a grant cannot be found within the active organization."""
 
 
-class DonationNotFoundError(FundraisingError):
+class DonationNotFoundError(NotFoundError, FundraisingError):
     """Raised when a donation cannot be found within the active organization."""
 
 
