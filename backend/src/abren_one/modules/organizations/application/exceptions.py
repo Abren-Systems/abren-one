@@ -4,7 +4,9 @@ Re-exports domain exceptions so interfaces interact only with the application la
 """
 
 from abren_one.modules.organizations.domain.exceptions import (
+    BranchNotFoundError,
     CannotRevokeLastOwnerError,
+    DepartmentNotFoundError,
     DuplicateMembershipError,
     MembershipInactiveError,
     MembershipNotFoundError,
@@ -14,7 +16,9 @@ from abren_one.modules.organizations.domain.exceptions import (
 )
 
 __all__ = [
+    "BranchNotFoundError",
     "CannotRevokeLastOwnerError",
+    "DepartmentNotFoundError",
     "DuplicateMembershipError",
     "MembershipInactiveError",
     "MembershipNotFoundError",

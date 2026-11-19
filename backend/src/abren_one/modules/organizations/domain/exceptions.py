@@ -13,6 +13,14 @@ class OrganizationSuspendedError(OrganizationError):
     """Raised when an operation is attempted against a suspended organization."""
 
 
+class BranchNotFoundError(NotFoundError, OrganizationError):
+    """Raised when a branch cannot be found."""
+
+
+class DepartmentNotFoundError(NotFoundError, OrganizationError):
+    """Raised when a department cannot be found."""
+
+
 class MembershipNotFoundError(NotFoundError, OrganizationError):
     """Raised when a user membership cannot be found."""
 

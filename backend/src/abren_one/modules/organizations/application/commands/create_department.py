@@ -3,7 +3,11 @@ from uuid import UUID
 
 from django.db import transaction
 
-from abren_one.modules.organizations.domain.exceptions import OrganizationError
+from abren_one.modules.organizations.domain.exceptions import (
+    BranchNotFoundError,
+    OrganizationError,
+    OrganizationNotFoundError,
+)
 from abren_one.modules.organizations.models import Branch, Department, Organization
 from abren_one.platform.audit.service import record_audit_event
 from abren_one.platform.common.context import ExecutionContext
@@ -28,13 +32,20 @@ def execute(data: CreateDepartmentInput) -> CreateDepartmentResult:
     if data.context.organization_id is None:
         raise OrganizationError("Organization context is required.")
 
-    org = Organization.objects.get(id=data.context.organization_id)
+    try:
+        org = Organization.objects.get(id=data.context.organization_id)
+    except Organization.DoesNotExist as exc:
+        raise OrganizationNotFoundError(f"Organization {data.context.organization_id} not found.") from exc
+
     if Department.objects.filter(organization=org, code=data.code).exists():
         raise OrganizationError(f"Department with code '{data.code}' already exists in this organization.")
 
     branch = None
     if data.branch_id:
-        branch = Branch.objects.get(id=data.branch_id, organization=org)
+        try:
+            branch = Branch.objects.get(id=data.branch_id, organization=org)
+        except Branch.DoesNotExist as exc:
+            raise BranchNotFoundError(f"Branch {data.branch_id} not found in this organization.") from exc
 
     department = Department.objects.create(
         organization=org,

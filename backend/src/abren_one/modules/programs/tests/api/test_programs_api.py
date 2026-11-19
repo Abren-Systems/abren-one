@@ -110,3 +110,159 @@ class TestProgramsAPI:
             HTTP_X_ORGANIZATION_ID=str(self.org_id),
         )
         assert detail_resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_patch_program(self) -> None:
+        prog = Program.objects.create(organization_id=self.org_id, name="Original Program")
+        resp = self.client.patch(
+            f"/api/v1/programs/{prog.id}/",
+            {"name": "Patched Program", "status": "completed"},
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["status"] == "completed"
+
+        prog.refresh_from_db()
+        assert prog.name == "Patched Program"
+        assert prog.status == "completed"
+
+    def test_project_api_lifecycle(self) -> None:
+        prog = Program.objects.create(organization_id=self.org_id, name="Project Host Program")
+
+        # Create project
+        create_resp = self.client.post(
+            "/api/v1/programs/projects/",
+            {
+                "program_id": str(prog.id),
+                "name": "School Construction",
+                "description": "Building classrooms",
+                "budget_currency": "USD",
+            },
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert create_resp.status_code == status.HTTP_201_CREATED
+        project_id = create_resp.data["project_id"]
+
+        # List projects
+        list_resp = self.client.get(
+            f"/api/v1/programs/projects/?program_id={prog.id}",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert list_resp.status_code == status.HTTP_200_OK
+        assert len(list_resp.data) == 1
+        assert list_resp.data[0]["id"] == str(project_id)
+        assert list_resp.data[0]["name"] == "School Construction"
+
+        # Detail project
+        detail_resp = self.client.get(
+            f"/api/v1/programs/projects/{project_id}/",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert detail_resp.status_code == status.HTTP_200_OK
+        assert detail_resp.data["name"] == "School Construction"
+        assert detail_resp.data["status"] == "planning"
+
+        # Patch project
+        patch_resp = self.client.patch(
+            f"/api/v1/programs/projects/{project_id}/",
+            {"status": "in_progress"},
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert patch_resp.status_code == status.HTTP_200_OK
+        assert patch_resp.data["status"] == "in_progress"
+
+    def test_activity_api_lifecycle(self) -> None:
+        from abren_one.modules.programs.models import Project
+
+        prog = Program.objects.create(organization_id=self.org_id, name="Activity Host Program")
+        proj = Project.objects.create(
+            organization_id=self.org_id,
+            program=prog,
+            name="Host Project",
+        )
+
+        # Create activity
+        create_resp = self.client.post(
+            "/api/v1/programs/activities/",
+            {
+                "project_id": str(proj.id),
+                "name": "Site Survey",
+                "due_date": "2026-06-30",
+            },
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert create_resp.status_code == status.HTTP_201_CREATED
+        activity_id = create_resp.data["activity_id"]
+
+        # List activities
+        list_resp = self.client.get(
+            f"/api/v1/programs/activities/?project_id={proj.id}",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert list_resp.status_code == status.HTTP_200_OK
+        assert len(list_resp.data) == 1
+        assert list_resp.data[0]["id"] == str(activity_id)
+
+        # Detail activity
+        detail_resp = self.client.get(
+            f"/api/v1/programs/activities/{activity_id}/",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert detail_resp.status_code == status.HTTP_200_OK
+        assert detail_resp.data["name"] == "Site Survey"
+        assert detail_resp.data["status"] == "pending"
+
+        # Patch activity
+        patch_resp = self.client.patch(
+            f"/api/v1/programs/activities/{activity_id}/",
+            {"status": "in_progress"},
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert patch_resp.status_code == status.HTTP_200_OK
+        assert patch_resp.data["status"] == "in_progress"
+
+    def test_cross_tenant_project_and_activity_isolation(self) -> None:
+        from abren_one.modules.programs.models import Activity, Project
+
+        init_ctx = ExecutionContext(
+            actor_type=ActorType.SYSTEM,
+            actor_id=None,
+            organization_id=None,
+            correlation_id=uuid.uuid4(),
+        )
+        other_org = create_organization(
+            CreateOrganizationInput(
+                context=init_ctx,
+                name="Other Secret Org",
+                slug="secret-prog-org",
+            )
+        )
+        other_prog = Program.objects.create(organization_id=other_org.organization_id, name="Secret Prog")
+        other_proj = Project.objects.create(
+            organization_id=other_org.organization_id,
+            program=other_prog,
+            name="Secret Project",
+        )
+        other_act = Activity.objects.create(
+            organization_id=other_org.organization_id,
+            project=other_proj,
+            name="Secret Activity",
+        )
+
+        # Org A requests Org B's project -> 404
+        proj_resp = self.client.get(
+            f"/api/v1/programs/projects/{other_proj.id}/",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert proj_resp.status_code == status.HTTP_404_NOT_FOUND
+
+        # Org A requests Org B's activity -> 404
+        act_resp = self.client.get(
+            f"/api/v1/programs/activities/{other_act.id}/",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert act_resp.status_code == status.HTTP_404_NOT_FOUND

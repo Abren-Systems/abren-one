@@ -45,11 +45,17 @@ from abren_one.modules.organizations.application.commands.suspend_membership imp
 from abren_one.modules.organizations.application.commands.suspend_membership import (
     execute as suspend_membership,
 )
+from abren_one.modules.organizations.application.queries.get_department import (
+    execute as get_department,
+)
 from abren_one.modules.organizations.application.queries.get_organization import (
     execute as get_organization,
 )
 from abren_one.modules.organizations.application.queries.list_branches import (
     execute as list_branches,
+)
+from abren_one.modules.organizations.application.queries.list_departments import (
+    execute as list_departments,
 )
 from abren_one.modules.organizations.application.queries.list_members import (
     execute as list_members,
@@ -255,3 +261,16 @@ class TestOrganizationCommandsAndQueries:
 
         assert AuditEvent.objects.filter(action="department.created", target_id=dept1.department_id).exists()
         assert AuditEvent.objects.filter(action="department.created", target_id=dept2.department_id).exists()
+
+        # Query tests
+        dept1_result = get_department(organization_id=org.organization_id, department_id=dept1.department_id)
+        assert dept1_result.name == "Finance"
+        assert dept1_result.code == "FIN"
+        assert dept1_result.branch_id == branch.branch_id
+
+        all_depts = list_departments(organization_id=org.organization_id)
+        assert len(all_depts) == 2
+
+        branch_depts = list_departments(organization_id=org.organization_id, branch_id=branch.branch_id)
+        assert len(branch_depts) == 1
+        assert branch_depts[0].id == dept1.department_id

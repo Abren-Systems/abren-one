@@ -11,3 +11,19 @@ class ProgramNotFoundError(NotFoundError, ProgramError):
 
 class ProjectNotFoundError(NotFoundError, ProgramError):
     """Raised when a project cannot be found."""
+
+
+class ActivityNotFoundError(NotFoundError, ProgramError):
+    """Raised when an activity cannot be found."""
+
+
+class InvalidProgramTransitionError(ProgramError):
+    """Raised when an invalid program status transition is attempted."""
+
+
+class InvalidProjectTransitionError(ProgramError):
+    """Raised when an invalid project status transition is attempted."""
+
+
+class InvalidActivityTransitionError(ProgramError):
+    """Raised when an invalid activity status transition is attempted."""

@@ -29,6 +29,21 @@ class BranchResponseSerializer(serializers.Serializer):
     is_active = serializers.BooleanField()
 
 
+class CreateDepartmentRequestSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=255)
+    code = serializers.CharField(max_length=50)
+    branch_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+
+
+class DepartmentResponseSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    organization_id = serializers.UUIDField()
+    branch_id = serializers.UUIDField(allow_null=True)
+    name = serializers.CharField()
+    code = serializers.CharField()
+    is_active = serializers.BooleanField()
+
+
 class AddMemberRequestSerializer(serializers.Serializer):
     user_id = serializers.UUIDField()
     role = serializers.ChoiceField(choices=["owner", "admin", "staff", "member"], default="member")

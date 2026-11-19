@@ -24,6 +24,12 @@ from abren_one.modules.organizations.application.commands.create_branch import (
 from abren_one.modules.organizations.application.commands.create_branch import (
     execute as create_branch,
 )
+from abren_one.modules.organizations.application.commands.create_department import (
+    CreateDepartmentInput,
+)
+from abren_one.modules.organizations.application.commands.create_department import (
+    execute as create_department,
+)
 from abren_one.modules.organizations.application.commands.create_organization import (
     CreateOrganizationInput,
 )
@@ -42,11 +48,17 @@ from abren_one.modules.organizations.application.commands.suspend_membership imp
 from abren_one.modules.organizations.application.commands.suspend_membership import (
     execute as suspend_membership,
 )
+from abren_one.modules.organizations.application.queries.get_department import (
+    execute as get_department,
+)
 from abren_one.modules.organizations.application.queries.get_organization import (
     execute as get_organization,
 )
 from abren_one.modules.organizations.application.queries.list_branches import (
     execute as list_branches,
+)
+from abren_one.modules.organizations.application.queries.list_departments import (
+    execute as list_departments,
 )
 from abren_one.modules.organizations.application.queries.list_members import (
     execute as list_members,
@@ -55,7 +67,9 @@ from abren_one.modules.organizations.interfaces.api.v1.serializers import (
     AddMemberRequestSerializer,
     BranchResponseSerializer,
     CreateBranchRequestSerializer,
+    CreateDepartmentRequestSerializer,
     CreateOrganizationRequestSerializer,
+    DepartmentResponseSerializer,
     MemberResponseSerializer,
     OrganizationResponseSerializer,
 )
@@ -125,6 +139,50 @@ class BranchListCreateView(APIView):
         )
 
         return Response({"branch_id": str(result.branch_id)}, status=status.HTTP_201_CREATED)
+
+
+class DepartmentListCreateView(APIView):
+    """List or create departments in the active organization."""
+
+    permission_classes = [IsAuthenticated, HasOrganizationContext]
+
+    def get(self, request: Request) -> Response:
+        branch_id_raw = request.query_params.get("branch_id")
+        branch_id = uuid.UUID(branch_id_raw) if branch_id_raw else None
+        departments = list_departments(
+            organization_id=request.org_context.organization_id,
+            branch_id=branch_id,
+        )
+        return Response(DepartmentResponseSerializer(departments, many=True).data)
+
+    def post(self, request: Request) -> Response:
+        serializer = CreateDepartmentRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        context = build_execution_context(request)
+        result = create_department(
+            CreateDepartmentInput(
+                context=context,
+                name=serializer.validated_data["name"],
+                code=serializer.validated_data["code"],
+                branch_id=serializer.validated_data.get("branch_id"),
+            )
+        )
+
+        return Response({"department_id": str(result.department_id)}, status=status.HTTP_201_CREATED)
+
+
+class DepartmentDetailView(APIView):
+    """Retrieve a department by ID within the active organization."""
+
+    permission_classes = [IsAuthenticated, HasOrganizationContext]
+
+    def get(self, request: Request, department_id: uuid.UUID) -> Response:
+        dept = get_department(
+            organization_id=request.org_context.organization_id,
+            department_id=department_id,
+        )
+        return Response(DepartmentResponseSerializer(dept).data)
 
 
 class MemberListCreateView(APIView):

@@ -159,3 +159,65 @@ class TestOrganizationsAPI:
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "already exists" in str(response.data)
+
+    def test_create_and_list_departments(self) -> None:
+        org = Organization.objects.create(name="Dept Org", slug="dept-api-org")
+        Membership.objects.create(organization=org, user=self.user, role="owner", status="active")
+        branch = Branch.objects.create(organization=org, name="HQ Branch", code="HQ-1", is_headquarters=True)
+
+        # 1. Create department with branch
+        resp = self.client.post(
+            "/api/v1/organizations/departments/",
+            {"name": "Human Resources", "code": "HR", "branch_id": str(branch.id)},
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(org.id),
+        )
+        assert resp.status_code == status.HTTP_201_CREATED
+        dept_id = resp.data["department_id"]
+
+        # 2. List departments
+        list_resp = self.client.get(
+            "/api/v1/organizations/departments/",
+            HTTP_X_ORGANIZATION_ID=str(org.id),
+        )
+        assert list_resp.status_code == status.HTTP_200_OK
+        assert len(list_resp.data) == 1
+        assert list_resp.data[0]["name"] == "Human Resources"
+        assert list_resp.data[0]["code"] == "HR"
+        assert list_resp.data[0]["branch_id"] == str(branch.id)
+
+        # 3. Retrieve department detail
+        detail_resp = self.client.get(
+            f"/api/v1/organizations/departments/{dept_id}/",
+            HTTP_X_ORGANIZATION_ID=str(org.id),
+        )
+        assert detail_resp.status_code == status.HTTP_200_OK
+        assert detail_resp.data["id"] == str(dept_id)
+        assert detail_resp.data["name"] == "Human Resources"
+
+    def test_cross_tenant_department_isolation(self) -> None:
+        org_a = Organization.objects.create(name="Org A Dept", slug="org-a-dept")
+        Membership.objects.create(organization=org_a, user=self.user, role="owner", status="active")
+
+        other_user = User.objects.create_user(username="dept_other", password="secretpassword")
+        org_b = Organization.objects.create(name="Org B Dept", slug="org-b-dept")
+        Membership.objects.create(organization=org_b, user=other_user, role="owner", status="active")
+
+        from abren_one.modules.organizations.models import Department
+
+        dept_b = Department.objects.create(organization=org_b, name="Confidential B", code="CONF")
+
+        # Org A cannot see Org B's department in list
+        list_resp = self.client.get(
+            "/api/v1/organizations/departments/",
+            HTTP_X_ORGANIZATION_ID=str(org_a.id),
+        )
+        assert list_resp.status_code == status.HTTP_200_OK
+        assert len(list_resp.data) == 0
+
+        # Org A cannot retrieve Org B's department by ID (fails with 404)
+        detail_resp = self.client.get(
+            f"/api/v1/organizations/departments/{dept_b.id}/",
+            HTTP_X_ORGANIZATION_ID=str(org_a.id),
+        )
+        assert detail_resp.status_code == status.HTTP_404_NOT_FOUND
