@@ -99,6 +99,8 @@ source_modules = [
     "abren_one.modules.programs.application",
     "abren_one.modules.fundraising.domain",
     "abren_one.modules.fundraising.application",
+    "abren_one.modules.beneficiaries.domain",
+    "abren_one.modules.beneficiaries.application",
 ]
 forbidden_modules = ["rest_framework"]
 
@@ -127,6 +129,15 @@ layers = [
     "abren_one.modules.fundraising.interfaces",
     "abren_one.modules.fundraising.application",
     "abren_one.modules.fundraising.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "Beneficiaries internal layer direction"
+type = "layers"
+layers = [
+    "abren_one.modules.beneficiaries.interfaces",
+    "abren_one.modules.beneficiaries.application",
+    "abren_one.modules.beneficiaries.domain",
 ]
 
 # Cross-module public.py enforcement is handled by the architecture pytest

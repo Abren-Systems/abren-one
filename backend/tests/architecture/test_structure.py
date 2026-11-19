@@ -361,7 +361,7 @@ class TestBusinessModulesExist:
     """Verify the expected initial business modules are present."""
 
     def test_initial_business_modules(self, modules_root: Path) -> None:
-        expected = {"organizations", "programs", "fundraising"}
+        expected = {"organizations", "programs", "fundraising", "beneficiaries"}
         if not modules_root.exists():
             pytest.skip("modules/ directory does not exist yet")
 

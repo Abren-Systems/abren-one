@@ -2,7 +2,7 @@
 
 **App label:** `programs`
 **Location:** `backend/src/abren_one/modules/programs/`
-**Status:** Planned — implementation in Stage 3
+**Status:** Implemented
 
 ---
 
@@ -11,8 +11,6 @@
 Manages program delivery — Program, Project, and Activity definition and operational delivery. This module represents the core service-delivery domain of the NGO, structuring work into a hierarchy of long-running initiatives, time-bound projects, and specific activities.
 
 ## Owned Models
-
-> To be implemented in Stage 3.
 
 | Model | Description |
 |-------|-------------|

@@ -17,12 +17,12 @@
 | `organizations` | Organization, Branch, Department, Membership | Organizational structure and lifecycle |
 | `programs` | Program, Project, Activity | Program structure and delivery |
 | `fundraising` | Donor, Grant, Donation | Funding streams, donors, and contributions |
+| `beneficiaries` | Beneficiary, ServiceDelivery | Beneficiary profiles and service delivery tracking |
 
 ## Future Modules (Not Yet Implemented)
 
 | Module | Responsibility |
 |--------|---------------|
-| `beneficiaries` | Beneficiary records and support relationships |
 | `finance` | Accounting, budgets, financial controls |
 | `procurement` | Purchasing lifecycle |
 | `inventory` | Stock, storage, distributions |

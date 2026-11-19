@@ -26,10 +26,10 @@ The Abren One architectural foundation has been audited and verified against the
 ```
 ==> 1. Django System Check:  0 issues (0 silenced)
 ==> 2. Ruff Lint:            All checks passed!
-==> 3. Ruff Format:          181 files already formatted
+==> 3. Ruff Format:          283 files already formatted
 ==> 4. Pyright Type Check:   0 errors, 0 warnings, 0 informations
-==> 5. Import Linter:        4 contracts kept, 0 broken
-==> 6. Pytest Test Suite:    104 passed in 0.37s
+==> 5. Import Linter:        6 contracts kept, 0 broken
+==> 6. Pytest Test Suite:    178 passed in 0.59s
 ```
 
 Both local development and CI execute this identical 6-stage validation pipeline via [`scripts/validate.sh`](file:///Users/yuma/djprojects/abren-one/scripts/validate.sh) and [`.github/workflows/ci.yml`](file:///Users/yuma/djprojects/abren-one/.github/workflows/ci.yml).
@@ -117,11 +117,13 @@ Both local development and CI execute this identical 6-stage validation pipeline
 
 #### 4.1 `import-linter` detects prohibited dependencies — PASS
 * **Requirement:** Automated contract enforcement catches prohibited imports.
-* **Proof:** [`pyproject.toml`](file:///Users/yuma/djprojects/abren-one/pyproject.toml#L96) defines 4 active contracts:
+* **Proof:** [`pyproject.toml`](file:///Users/yuma/djprojects/abren-one/pyproject.toml#L96) defines 6 active contracts:
   1. *Platform does not depend on business modules*
   2. *Business domain/application layers do not import DRF*
   3. *Organizations internal layer direction (interfaces -> application -> domain)*
   4. *Programs internal layer direction (interfaces -> application -> domain)*
+  5. *Fundraising internal layer direction (interfaces -> application -> domain)*
+  6. *Beneficiaries internal layer direction (interfaces -> application -> domain)*
   Synthetic tests in [`test_imports.py`](file:///Users/yuma/djprojects/abren-one/backend/tests/architecture/test_imports.py#L512) verify that importing prohibited modules fails test assertions.
 
 #### 4.2 Architecture tests detect structural violations — PASS
@@ -132,9 +134,9 @@ Both local development and CI execute this identical 6-stage validation pipeline
 * **Requirement:** Clean static analysis and test execution.
 * **Proof:**
   * `ruff check .` -> 0 errors.
-  * `ruff format --check .` -> 181 files formatted.
+  * `ruff format --check .` -> 283 files formatted.
   * `pyright` -> 0 errors, 0 warnings, 0 informations.
-  * `pytest` -> 104 passed.
+  * `pytest` -> 178 passed.
 
 #### 4.4 Documentation and actual implementation agree — PASS
 * **Requirement:** Living docs match code reality.

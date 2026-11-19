@@ -12,4 +12,5 @@ urlpatterns = [
     path("api/v1/organizations/", include("abren_one.modules.organizations.interfaces.api.v1.urls")),
     path("api/v1/programs/", include("abren_one.modules.programs.interfaces.api.v1.urls")),
     path("api/v1/fundraising/", include("abren_one.modules.fundraising.interfaces.api.v1.urls")),
+    path("api/v1/beneficiaries/", include("abren_one.modules.beneficiaries.interfaces.api.v1.urls")),
 ]
