@@ -21,6 +21,7 @@ class Project(OrgOwnedMixin, TimestampMixin, models.Model):
         max_length=20,
         choices=[(s.value, s.name) for s in ProjectStatus],
         default=ProjectStatus.PLANNING.value,
+        db_index=True,
     )
     budget_currency = models.CharField(max_length=3, default="USD")
 

@@ -19,6 +19,7 @@ class Organization(TimestampMixin, models.Model):
         max_length=20,
         choices=[(s.value, s.name) for s in OrganizationStatus],
         default=OrganizationStatus.ACTIVE.value,
+        db_index=True,
     )
 
     class Meta:

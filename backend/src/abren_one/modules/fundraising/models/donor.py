@@ -25,6 +25,7 @@ class Donor(OrgOwnedMixin, TimestampMixin, models.Model):
         max_length=50,
         choices=[(s.value, s.name) for s in DonorStatus],
         default=DonorStatus.ACTIVE.value,
+        db_index=True,
     )
 
     class Meta:

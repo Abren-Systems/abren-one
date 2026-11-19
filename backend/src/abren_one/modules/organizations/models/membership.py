@@ -28,11 +28,13 @@ class Membership(TimestampMixin, models.Model):
         max_length=20,
         choices=[(r.value, r.name) for r in MembershipRole],
         default=MembershipRole.MEMBER.value,
+        db_index=True,
     )
     status = models.CharField(
         max_length=20,
         choices=[(s.value, s.name) for s in MembershipStatus],
         default=MembershipStatus.ACTIVE.value,
+        db_index=True,
     )
 
     class Meta:

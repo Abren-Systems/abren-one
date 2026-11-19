@@ -16,6 +16,7 @@ class Program(OrgOwnedMixin, TimestampMixin, models.Model):
         max_length=20,
         choices=[(s.value, s.name) for s in ProgramStatus],
         default=ProgramStatus.ACTIVE.value,
+        db_index=True,
     )
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)

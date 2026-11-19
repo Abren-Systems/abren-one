@@ -26,9 +26,10 @@ class Grant(OrgOwnedMixin, TimestampMixin, models.Model):
         max_length=50,
         choices=[(s.value, s.name) for s in GrantStatus],
         default=GrantStatus.PROPOSED.value,
+        db_index=True,
     )
     # Cross-module soft reference (§4.4)
-    program_id = models.UUIDField(null=True, blank=True)
+    program_id = models.UUIDField(null=True, blank=True, db_index=True)
 
     class Meta:
         db_table = "fundraising_grants"

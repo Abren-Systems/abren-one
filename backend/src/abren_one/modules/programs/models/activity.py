@@ -20,6 +20,7 @@ class Activity(OrgOwnedMixin, TimestampMixin, models.Model):
         max_length=20,
         choices=[(s.value, s.name) for s in ActivityStatus],
         default=ActivityStatus.PENDING.value,
+        db_index=True,
     )
     due_date = models.DateField(null=True, blank=True)
 
