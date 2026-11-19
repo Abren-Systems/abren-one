@@ -1,8 +1,11 @@
 """
 Local development settings for Abren One.
 
-Uses SQLite and enables debug toolbar.
+Uses SQLite by default and enables debug toolbar.
+Can be switched to PostgreSQL by setting USE_POSTGRES=1.
 """
+
+import os
 
 from .base import *  # noqa: F401, F403
 
@@ -16,14 +19,26 @@ SECRET_KEY = "django-insecure-local-development-key-do-not-use-in-production"  #
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0"]  # noqa: S104
 
 # ---------------------------------------------------------------------------
-# Database — SQLite for local development
+# Database — PostgreSQL when USE_POSTGRES is set, otherwise SQLite
 # ---------------------------------------------------------------------------
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",  # noqa: F405
+if os.environ.get("USE_POSTGRES", "").lower() in {"1", "true", "yes"}:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.environ.get("DATABASE_NAME", "abren_one"),
+            "USER": os.environ.get("DATABASE_USER", "abren"),
+            "PASSWORD": os.environ.get("DATABASE_PASSWORD", "abren_secret_dev_pwd"),
+            "HOST": os.environ.get("DATABASE_HOST", "localhost"),
+            "PORT": os.environ.get("DATABASE_PORT", "5432"),
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",  # noqa: F405
+        }
+    }
 
 # ---------------------------------------------------------------------------
 # Django Debug Toolbar (optional dev dependency)
