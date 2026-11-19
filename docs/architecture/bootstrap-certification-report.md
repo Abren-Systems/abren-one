@@ -153,5 +153,5 @@ Both local development and CI execute this identical 6-stage validation pipeline
 **Next Milestone:**  
 The repository is primed for Phase 2 domain expansion:
 1. **Next Domain Modules:** e.g., Donors & Fundraising, Beneficiaries & Services, or Volunteers.
-2. **PostgreSQL Setup:** Transition from local SQLite test runner to containerized PostgreSQL 15+ target.
+2. **PostgreSQL Setup:** Containerized PostgreSQL 18+ target configured and verified with live migrations, constraints, and multi-tenant isolation tests.
 3. **Frontend Bootstrap:** Vue 3 + TypeScript client integrating with the authenticated API endpoints.

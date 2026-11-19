@@ -2,12 +2,21 @@
 
 ## Local PostgreSQL Service
 
-Abren One targets **PostgreSQL 16+** for production deployment. While SQLite is used for fast, zero-dependency unit and architecture test suites, local development and staging environments can run containerized PostgreSQL.
+Abren One targets **PostgreSQL 18+** (with forward-compatibility for 19+) for development and production deployment. While SQLite in-memory is used for fast, zero-dependency unit and architecture test suites, local development, staging, and production environments utilize containerized PostgreSQL.
+
+### Architecture Note on PostgreSQL 18+
+
+Starting in PostgreSQL 18+, official Docker images structure data under `/var/lib/postgresql` (major-version specific subdirectories) for seamless `pg_upgrade --link` support. The compose service mounts to `/var/lib/postgresql` accordingly.
 
 ### Starting PostgreSQL
 
 ```bash
 docker compose -f infra/docker-compose.yml up -d
+```
+
+To specify a custom or development image (e.g. PostgreSQL 19 when available):
+```bash
+POSTGRES_IMAGE=postgres:19-alpine docker compose -f infra/docker-compose.yml up -d
 ```
 
 Check service health:
