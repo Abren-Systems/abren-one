@@ -1,6 +1,6 @@
 # Frontend Conventions
 
-> **Status:** Placeholder — detailed conventions will be defined when frontend implementation begins.
+> **Status:** Active & Implemented — Vue 3 + TypeScript SPA with Vite, Pinia, and Vue Router.
 
 ---
 

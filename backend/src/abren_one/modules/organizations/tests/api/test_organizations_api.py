@@ -29,6 +29,23 @@ class TestOrganizationsAPI:
         org_id = response.data["organization_id"]
         assert Membership.objects.filter(organization_id=org_id, user=self.user, role="owner").exists()
 
+    def test_list_user_organizations_endpoint(self) -> None:
+        org1 = Organization.objects.create(name="Alpha Org", slug="alpha-org")
+        org2 = Organization.objects.create(name="Beta Org", slug="beta-org")
+        Membership.objects.create(organization=org1, user=self.user, role="admin", status="active")
+        Membership.objects.create(organization=org2, user=self.user, role="staff", status="active")
+
+        # Third org where user is not a member
+        Organization.objects.create(name="Gamma Org", slug="gamma-org")
+
+        response = self.client.get("/api/v1/organizations/")
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 2
+        names = [o["name"] for o in response.data]
+        assert "Alpha Org" in names
+        assert "Beta Org" in names
+        assert "Gamma Org" not in names
+
     def test_get_current_organization_success(self) -> None:
         org = Organization.objects.create(name="My Org", slug="my-org")
         Membership.objects.create(organization=org, user=self.user, role="owner", status="active")

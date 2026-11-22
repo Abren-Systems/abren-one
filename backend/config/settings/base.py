@@ -39,6 +39,7 @@ DJANGO_APPS = [
 
 THIRD_PARTY_APPS = [
     "rest_framework",
+    "drf_spectacular",
 ]
 
 PLATFORM_APPS = [
@@ -167,4 +168,16 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "abren_one.platform.common.pagination.StandardCursorPagination",
     "PAGE_SIZE": 50,
     "EXCEPTION_HANDLER": "abren_one.platform.common.exception_handler.handle_domain_exception",
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+# ---------------------------------------------------------------------------
+# OpenAPI Documentation (drf-spectacular)
+# ---------------------------------------------------------------------------
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Abren One API",
+    "DESCRIPTION": "OpenAPI 3.0 documentation for Abren One NGO Operating System.",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
 }

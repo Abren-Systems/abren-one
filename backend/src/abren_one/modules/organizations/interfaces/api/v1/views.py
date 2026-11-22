@@ -63,6 +63,9 @@ from abren_one.modules.organizations.application.queries.list_departments import
 from abren_one.modules.organizations.application.queries.list_members import (
     execute as list_members,
 )
+from abren_one.modules.organizations.application.queries.list_user_organizations import (
+    execute as list_user_organizations,
+)
 from abren_one.modules.organizations.interfaces.api.v1.serializers import (
     AddMemberRequestSerializer,
     BranchResponseSerializer,
@@ -72,6 +75,7 @@ from abren_one.modules.organizations.interfaces.api.v1.serializers import (
     DepartmentResponseSerializer,
     MemberResponseSerializer,
     OrganizationResponseSerializer,
+    UserOrganizationResponseSerializer,
 )
 from abren_one.platform.authorization.permissions import require_role
 from abren_one.platform.common.context import build_execution_context
@@ -79,12 +83,19 @@ from abren_one.platform.tenancy.permissions import HasOrganizationContext
 
 
 class ProvisionOrganizationView(APIView):
-    """Initial organization provisioning (§5.2, §5.3).
+    """Initial organization provisioning and user organizations listing (§5.2, §5.3).
 
     Requires authentication, but does NOT require prior organization context.
     """
 
     permission_classes = [IsAuthenticated]
+
+    def get(self, request: Request) -> Response:
+        orgs = list_user_organizations(user_id=request.user.id)
+        return Response(
+            UserOrganizationResponseSerializer(orgs, many=True).data,
+            status=status.HTTP_200_OK,
+        )
 
     def post(self, request: Request) -> Response:
         serializer = CreateOrganizationRequestSerializer(data=request.data)

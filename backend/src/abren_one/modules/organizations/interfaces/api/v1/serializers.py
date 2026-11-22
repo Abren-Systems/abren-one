@@ -14,6 +14,15 @@ class OrganizationResponseSerializer(serializers.Serializer):
     is_active = serializers.BooleanField()
 
 
+class UserOrganizationResponseSerializer(serializers.Serializer):
+    organization_id = serializers.UUIDField()
+    name = serializers.CharField()
+    slug = serializers.CharField()
+    role = serializers.CharField()
+    status = serializers.CharField()
+    is_active = serializers.BooleanField()
+
+
 class CreateBranchRequestSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
     code = serializers.CharField(max_length=50)

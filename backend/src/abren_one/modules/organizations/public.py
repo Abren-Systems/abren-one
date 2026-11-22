@@ -62,6 +62,12 @@ from abren_one.modules.organizations.application.queries.list_members import (
 from abren_one.modules.organizations.application.queries.list_members import (
     execute as list_members,
 )
+from abren_one.modules.organizations.application.queries.list_user_organizations import (
+    UserOrganizationResult,
+)
+from abren_one.modules.organizations.application.queries.list_user_organizations import (
+    execute as list_user_organizations,
+)
 from abren_one.modules.organizations.domain.exceptions import (
     BranchNotFoundError,
     CannotRevokeLastOwnerError,
@@ -90,6 +96,7 @@ __all__ = [
     "MembershipResult",
     "OrganizationError",
     "OrganizationNotFoundError",
+    "UserOrganizationResult",
     "create_branch",
     "create_department",
     "create_organization",
@@ -99,4 +106,5 @@ __all__ = [
     "list_branches",
     "list_departments",
     "list_members",
+    "list_user_organizations",
 ]
