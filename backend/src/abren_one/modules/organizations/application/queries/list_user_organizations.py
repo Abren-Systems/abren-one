@@ -14,12 +14,17 @@ class UserOrganizationResult:
     is_active: bool
 
 
-def execute(*, user_id: UUID) -> list[UserOrganizationResult]:
+def execute(
+    *,
+    user_id: UUID,
+    limit: int = 100,
+    offset: int = 0,
+) -> list[UserOrganizationResult]:
     """List all organizations that a user has active membership in."""
     memberships = (
         Membership.objects.filter(user_id=user_id, status="active")
         .select_related("organization")
-        .order_by("organization__name")
+        .order_by("organization__name")[offset : offset + limit]
     )
     return [
         UserOrganizationResult(

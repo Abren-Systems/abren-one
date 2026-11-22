@@ -14,12 +14,18 @@ class DepartmentSummaryResult:
     is_active: bool
 
 
-def execute(*, organization_id: UUID, branch_id: UUID | None = None) -> list[DepartmentSummaryResult]:
+def execute(
+    *,
+    organization_id: UUID,
+    branch_id: UUID | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> list[DepartmentSummaryResult]:
     """List departments for an organization, optionally filtered by branch."""
     qs = Department.objects.filter(organization_id=organization_id)
     if branch_id is not None:
         qs = qs.filter(branch_id=branch_id)
-    qs = qs.order_by("name")
+    qs = qs.order_by("name")[offset : offset + limit]
 
     return [
         DepartmentSummaryResult(

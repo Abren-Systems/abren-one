@@ -11,6 +11,7 @@ from abren_one.modules.organizations.domain.policies import can_transition_membe
 from abren_one.modules.organizations.domain.value_objects import MembershipStatus
 from abren_one.modules.organizations.models import Membership
 from abren_one.platform.audit.service import record_audit_event
+from abren_one.platform.authorization import check_permission
 from abren_one.platform.common.context import ExecutionContext
 
 
@@ -29,6 +30,8 @@ class SuspendMembershipResult:
 @transaction.atomic
 def execute(data: SuspendMembershipInput) -> SuspendMembershipResult:
     """Suspend an active membership (§5.2)."""
+    check_permission(data.context, "members:manage")
+
     if data.context.organization_id is None:
         raise OrganizationError("Organization context is required.")
 

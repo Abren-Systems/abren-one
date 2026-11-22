@@ -15,12 +15,18 @@ class ActivitySummaryResult:
     due_date: date | None
 
 
-def execute(*, organization_id: UUID, project_id: UUID | None = None) -> list[ActivitySummaryResult]:
+def execute(
+    *,
+    organization_id: UUID,
+    project_id: UUID | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> list[ActivitySummaryResult]:
     """List activities for an organization, optionally filtered by project."""
     qs = Activity.objects.filter(organization_id=organization_id)
     if project_id is not None:
         qs = qs.filter(project_id=project_id)
-    qs = qs.order_by("created_at")
+    qs = qs.order_by("created_at")[offset : offset + limit]
 
     return [
         ActivitySummaryResult(

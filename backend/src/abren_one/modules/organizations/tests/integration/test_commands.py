@@ -139,6 +139,7 @@ class TestOrganizationCommandsAndQueries:
             actor_id=user.id,
             organization_id=org.organization_id,
             correlation_id=uuid.uuid4(),
+            actor_role="owner",
         )
         branch_result = create_branch(
             CreateBranchInput(
@@ -172,6 +173,7 @@ class TestOrganizationCommandsAndQueries:
             actor_id=owner.id,
             organization_id=org.organization_id,
             correlation_id=uuid.uuid4(),
+            actor_role="owner",
         )
 
         # 1. Add member
@@ -218,6 +220,7 @@ class TestOrganizationCommandsAndQueries:
             actor_id=owner.id,
             organization_id=org.organization_id,
             correlation_id=uuid.uuid4(),
+            actor_role="owner",
         )
 
         with pytest.raises(CannotRevokeLastOwnerError, match="Cannot revoke the last active owner"):
@@ -242,6 +245,7 @@ class TestOrganizationCommandsAndQueries:
             actor_id=user.id,
             organization_id=org.organization_id,
             correlation_id=uuid.uuid4(),
+            actor_role="owner",
         )
 
         branch = create_branch(CreateBranchInput(context=tenant_ctx, name="Branch A", code="BRA", is_headquarters=True))

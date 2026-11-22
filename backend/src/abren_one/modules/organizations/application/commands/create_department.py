@@ -10,6 +10,7 @@ from abren_one.modules.organizations.domain.exceptions import (
 )
 from abren_one.modules.organizations.models import Branch, Department, Organization
 from abren_one.platform.audit.service import record_audit_event
+from abren_one.platform.authorization import check_permission
 from abren_one.platform.common.context import ExecutionContext
 
 
@@ -29,6 +30,8 @@ class CreateDepartmentResult:
 @transaction.atomic
 def execute(data: CreateDepartmentInput) -> CreateDepartmentResult:
     """Create a department within the active organization."""
+    check_permission(data.context, "organizations:manage")
+
     if data.context.organization_id is None:
         raise OrganizationError("Organization context is required.")
 

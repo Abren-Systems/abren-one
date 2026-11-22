@@ -77,7 +77,7 @@ from abren_one.modules.organizations.interfaces.api.v1.serializers import (
     OrganizationResponseSerializer,
     UserOrganizationResponseSerializer,
 )
-from abren_one.platform.authorization.permissions import require_role
+from abren_one.platform.authorization.permissions import require_permission
 from abren_one.platform.common.context import build_execution_context
 from abren_one.platform.tenancy.permissions import HasOrganizationContext
 
@@ -91,7 +91,20 @@ class ProvisionOrganizationView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request: Request) -> Response:
-        orgs = list_user_organizations(user_id=request.user.id)
+        try:
+            limit = max(1, min(int(request.query_params.get("limit", 100)), 500))
+        except ValueError, TypeError:
+            limit = 100
+        try:
+            offset = max(0, int(request.query_params.get("offset", 0)))
+        except ValueError, TypeError:
+            offset = 0
+
+        orgs = list_user_organizations(
+            user_id=request.user.id,
+            limit=limit,
+            offset=offset,
+        )
         return Response(
             UserOrganizationResponseSerializer(orgs, many=True).data,
             status=status.HTTP_200_OK,
@@ -119,7 +132,7 @@ class ProvisionOrganizationView(APIView):
 class CurrentOrganizationDetailView(APIView):
     """Retrieve details for the active organization context (§5.3)."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    permission_classes = [IsAuthenticated, HasOrganizationContext, require_permission("organizations:view")]
 
     def get(self, request: Request) -> Response:
         result = get_organization(organization_id=request.org_context.organization_id)
@@ -129,10 +142,29 @@ class CurrentOrganizationDetailView(APIView):
 class BranchListCreateView(APIView):
     """List or create branches in the active organization."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    def get_permissions(self):
+        perms = [IsAuthenticated(), HasOrganizationContext()]
+        if self.request and self.request.method == "POST":
+            perms.append(require_permission("organizations:manage")())
+        else:
+            perms.append(require_permission("organizations:view")())
+        return perms
 
     def get(self, request: Request) -> Response:
-        branches = list_branches(organization_id=request.org_context.organization_id)
+        try:
+            limit = max(1, min(int(request.query_params.get("limit", 100)), 500))
+        except ValueError, TypeError:
+            limit = 100
+        try:
+            offset = max(0, int(request.query_params.get("offset", 0)))
+        except ValueError, TypeError:
+            offset = 0
+
+        branches = list_branches(
+            organization_id=request.org_context.organization_id,
+            limit=limit,
+            offset=offset,
+        )
         return Response(BranchResponseSerializer(branches, many=True).data)
 
     def post(self, request: Request) -> Response:
@@ -155,14 +187,31 @@ class BranchListCreateView(APIView):
 class DepartmentListCreateView(APIView):
     """List or create departments in the active organization."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    def get_permissions(self):
+        perms = [IsAuthenticated(), HasOrganizationContext()]
+        if self.request and self.request.method == "POST":
+            perms.append(require_permission("organizations:manage")())
+        else:
+            perms.append(require_permission("organizations:view")())
+        return perms
 
     def get(self, request: Request) -> Response:
         branch_id_raw = request.query_params.get("branch_id")
         branch_id = uuid.UUID(branch_id_raw) if branch_id_raw else None
+        try:
+            limit = max(1, min(int(request.query_params.get("limit", 100)), 500))
+        except ValueError, TypeError:
+            limit = 100
+        try:
+            offset = max(0, int(request.query_params.get("offset", 0)))
+        except ValueError, TypeError:
+            offset = 0
+
         departments = list_departments(
             organization_id=request.org_context.organization_id,
             branch_id=branch_id,
+            limit=limit,
+            offset=offset,
         )
         return Response(DepartmentResponseSerializer(departments, many=True).data)
 
@@ -186,7 +235,7 @@ class DepartmentListCreateView(APIView):
 class DepartmentDetailView(APIView):
     """Retrieve a department by ID within the active organization."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    permission_classes = [IsAuthenticated, HasOrganizationContext, require_permission("organizations:view")]
 
     def get(self, request: Request, department_id: uuid.UUID) -> Response:
         dept = get_department(
@@ -199,16 +248,29 @@ class DepartmentDetailView(APIView):
 class MemberListCreateView(APIView):
     """List or add members in the active organization."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
-
     def get_permissions(self):
         perms = [IsAuthenticated(), HasOrganizationContext()]
         if self.request and self.request.method == "POST":
-            perms.append(require_role("owner", "admin")())
+            perms.append(require_permission("members:manage")())
+        else:
+            perms.append(require_permission("members:view")())
         return perms
 
     def get(self, request: Request) -> Response:
-        members = list_members(organization_id=request.org_context.organization_id)
+        try:
+            limit = max(1, min(int(request.query_params.get("limit", 100)), 500))
+        except ValueError, TypeError:
+            limit = 100
+        try:
+            offset = max(0, int(request.query_params.get("offset", 0)))
+        except ValueError, TypeError:
+            offset = 0
+
+        members = list_members(
+            organization_id=request.org_context.organization_id,
+            limit=limit,
+            offset=offset,
+        )
         return Response(MemberResponseSerializer(members, many=True).data)
 
     def post(self, request: Request) -> Response:
@@ -228,7 +290,7 @@ class MemberListCreateView(APIView):
 
 
 class ActivateMemberView(APIView):
-    permission_classes = [IsAuthenticated, HasOrganizationContext, require_role("owner", "admin")]
+    permission_classes = [IsAuthenticated, HasOrganizationContext, require_permission("members:manage")]
 
     def post(self, request: Request, membership_id: uuid.UUID) -> Response:
         context = build_execution_context(request)
@@ -237,7 +299,7 @@ class ActivateMemberView(APIView):
 
 
 class SuspendMemberView(APIView):
-    permission_classes = [IsAuthenticated, HasOrganizationContext, require_role("owner", "admin")]
+    permission_classes = [IsAuthenticated, HasOrganizationContext, require_permission("members:manage")]
 
     def post(self, request: Request, membership_id: uuid.UUID) -> Response:
         context = build_execution_context(request)
@@ -246,7 +308,7 @@ class SuspendMemberView(APIView):
 
 
 class RevokeMemberView(APIView):
-    permission_classes = [IsAuthenticated, HasOrganizationContext, require_role("owner", "admin")]
+    permission_classes = [IsAuthenticated, HasOrganizationContext, require_permission("members:manage")]
 
     def post(self, request: Request, membership_id: uuid.UUID) -> Response:
         context = build_execution_context(request)

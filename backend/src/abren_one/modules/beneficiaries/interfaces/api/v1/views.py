@@ -68,10 +68,21 @@ class BeneficiaryListCreateView(APIView):
     def get(self, request: Request) -> Response:
         status_param = request.query_params.get("status")
         type_param = request.query_params.get("beneficiary_type")
+        try:
+            limit = max(1, min(int(request.query_params.get("limit", 100)), 500))
+        except ValueError, TypeError:
+            limit = 100
+        try:
+            offset = max(0, int(request.query_params.get("offset", 0)))
+        except ValueError, TypeError:
+            offset = 0
+
         beneficiaries = list_beneficiaries(
             organization_id=request.org_context.organization_id,
             status=status_param,
             beneficiary_type=type_param,
+            limit=limit,
+            offset=offset,
         )
         return Response(BeneficiarySummaryResponseSerializer(beneficiaries, many=True).data)
 
@@ -168,10 +179,21 @@ class ServiceDeliveryListCreateView(APIView):
         program_id_raw = request.query_params.get("program_id")
         program_id = uuid.UUID(program_id_raw) if program_id_raw else None
 
+        try:
+            limit = max(1, min(int(request.query_params.get("limit", 100)), 500))
+        except ValueError, TypeError:
+            limit = 100
+        try:
+            offset = max(0, int(request.query_params.get("offset", 0)))
+        except ValueError, TypeError:
+            offset = 0
+
         deliveries = list_service_deliveries(
             organization_id=request.org_context.organization_id,
             beneficiary_id=beneficiary_id,
             program_id=program_id,
+            limit=limit,
+            offset=offset,
         )
         return Response(ServiceDeliveryResponseSerializer(deliveries, many=True).data)
 

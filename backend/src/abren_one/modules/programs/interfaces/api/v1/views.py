@@ -96,7 +96,20 @@ class ProgramListCreateView(APIView):
         ]
 
     def get(self, request: Request) -> Response:
-        programs = list_programs(organization_id=request.org_context.organization_id)
+        try:
+            limit = max(1, min(int(request.query_params.get("limit", 100)), 500))
+        except ValueError, TypeError:
+            limit = 100
+        try:
+            offset = max(0, int(request.query_params.get("offset", 0)))
+        except ValueError, TypeError:
+            offset = 0
+
+        programs = list_programs(
+            organization_id=request.org_context.organization_id,
+            limit=limit,
+            offset=offset,
+        )
         return Response(ProgramSummaryResponseSerializer(programs, many=True).data)
 
     def post(self, request: Request) -> Response:
@@ -178,9 +191,20 @@ class ProjectListCreateView(APIView):
     def get(self, request: Request) -> Response:
         program_id_raw = request.query_params.get("program_id")
         program_id = uuid.UUID(program_id_raw) if program_id_raw else None
+        try:
+            limit = max(1, min(int(request.query_params.get("limit", 100)), 500))
+        except ValueError, TypeError:
+            limit = 100
+        try:
+            offset = max(0, int(request.query_params.get("offset", 0)))
+        except ValueError, TypeError:
+            offset = 0
+
         projects = list_projects(
             organization_id=request.org_context.organization_id,
             program_id=program_id,
+            limit=limit,
+            offset=offset,
         )
         return Response(ProjectSummaryResponseSerializer(projects, many=True).data)
 
@@ -261,9 +285,20 @@ class ActivityListCreateView(APIView):
     def get(self, request: Request) -> Response:
         project_id_raw = request.query_params.get("project_id")
         project_id = uuid.UUID(project_id_raw) if project_id_raw else None
+        try:
+            limit = max(1, min(int(request.query_params.get("limit", 100)), 500))
+        except ValueError, TypeError:
+            limit = 100
+        try:
+            offset = max(0, int(request.query_params.get("offset", 0)))
+        except ValueError, TypeError:
+            offset = 0
+
         activities = list_activities(
             organization_id=request.org_context.organization_id,
             project_id=project_id,
+            limit=limit,
+            offset=offset,
         )
         return Response(ActivitySummaryResponseSerializer(activities, many=True).data)
 

@@ -14,6 +14,7 @@ from abren_one.modules.organizations.domain.value_objects import (
 )
 from abren_one.modules.organizations.models import Membership, Organization
 from abren_one.platform.audit.service import record_audit_event
+from abren_one.platform.authorization import check_permission
 from abren_one.platform.common.context import ExecutionContext
 
 User = get_user_model()
@@ -34,6 +35,8 @@ class AddMemberResult:
 @transaction.atomic
 def execute(data: AddMemberInput) -> AddMemberResult:
     """Add a member to the organization (§5.1, §5.2)."""
+    check_permission(data.context, "members:manage")
+
     if data.context.organization_id is None:
         raise OrganizationError("Organization context is required.")
 

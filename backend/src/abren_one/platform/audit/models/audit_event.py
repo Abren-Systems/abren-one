@@ -14,6 +14,7 @@ class AuditEvent(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     actor_type = models.CharField(max_length=50)
     actor_id = models.UUIDField(null=True, blank=True)
+    actor_role = models.CharField(max_length=50, null=True, blank=True)
     organization_id = models.UUIDField(null=True, blank=True)
     action = models.CharField(max_length=255)
     target_type = models.CharField(max_length=255)

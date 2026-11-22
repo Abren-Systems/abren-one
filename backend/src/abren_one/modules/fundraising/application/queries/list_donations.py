@@ -21,13 +21,18 @@ class DonationSummaryResult:
     program_id: UUID | None
 
 
-def execute(organization_id: UUID, donor_id: UUID | None = None) -> list[DonationSummaryResult]:
+def execute(
+    organization_id: UUID,
+    donor_id: UUID | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> list[DonationSummaryResult]:
     """List donations for the active organization (§6.3)."""
     qs = Donation.objects.filter(organization_id=organization_id).select_related("donor")
     if donor_id is not None:
         qs = qs.filter(donor_id=donor_id)
 
-    donations = qs.order_by("-received_at")
+    donations = qs.order_by("-received_at")[offset : offset + limit]
     return [
         DonationSummaryResult(
             id=d.id,

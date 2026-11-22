@@ -14,12 +14,18 @@ class ProjectSummaryResult:
     budget_currency: str
 
 
-def execute(*, organization_id: UUID, program_id: UUID | None = None) -> list[ProjectSummaryResult]:
+def execute(
+    *,
+    organization_id: UUID,
+    program_id: UUID | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> list[ProjectSummaryResult]:
     """List projects for an organization, optionally filtered by program."""
     qs = Project.objects.filter(organization_id=organization_id)
     if program_id is not None:
         qs = qs.filter(program_id=program_id)
-    qs = qs.order_by("name")
+    qs = qs.order_by("name")[offset : offset + limit]
 
     return [
         ProjectSummaryResult(

@@ -106,6 +106,7 @@ def execute(data: ReverseJournalEntryInput) -> ReverseJournalEntryResult:
     record_audit_event(
         actor_type=data.context.actor_type.value,
         actor_id=data.context.actor_id,
+        actor_role=data.context.actor_role,
         organization_id=org.id,
         action="finance.journal_entry.reversed",
         target_type="finance.JournalEntry",
@@ -121,6 +122,7 @@ def execute(data: ReverseJournalEntryInput) -> ReverseJournalEntryResult:
     record_audit_event(
         actor_type=data.context.actor_type.value,
         actor_id=data.context.actor_id,
+        actor_role=data.context.actor_role,
         organization_id=org.id,
         action="finance.journal_entry.created",
         target_type="finance.JournalEntry",

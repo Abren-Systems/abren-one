@@ -26,6 +26,8 @@ def execute(
     organization_id: UUID,
     beneficiary_id: UUID | None = None,
     program_id: UUID | None = None,
+    limit: int = 100,
+    offset: int = 0,
 ) -> list[ServiceDeliverySummaryResult]:
     """List service deliveries for an organization, optionally filtered."""
     qs = ServiceDelivery.objects.filter(organization_id=organization_id).select_related("beneficiary")
@@ -48,5 +50,5 @@ def execute(
             program_id=d.program_id,
             activity_id=d.activity_id,
         )
-        for d in qs
+        for d in qs[offset : offset + limit]
     ]

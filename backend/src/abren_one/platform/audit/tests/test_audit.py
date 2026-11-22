@@ -19,11 +19,13 @@ class TestAuditEventModel:
             target_id=uuid.uuid4(),
             correlation_id=uuid.uuid4(),
             outcome="success",
+            actor_role="admin",
             metadata={"source": "api"},
         )
         assert isinstance(event.id, uuid.UUID)
         assert event.action == "organization.created"
         assert event.outcome == "success"
+        assert event.actor_role == "admin"
         assert event.metadata == {"source": "api"}
 
     def test_audit_event_is_immutable_against_update(self) -> None:

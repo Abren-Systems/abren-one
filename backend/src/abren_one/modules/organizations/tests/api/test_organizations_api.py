@@ -238,3 +238,25 @@ class TestOrganizationsAPI:
             HTTP_X_ORGANIZATION_ID=str(org_a.id),
         )
         assert detail_resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_non_admin_cannot_create_branch_or_department(self) -> None:
+        org = Organization.objects.create(name="Member Org", slug="member-org")
+        Membership.objects.create(organization=org, user=self.user, role="member", status="active")
+
+        # 1. Member cannot create branch (403)
+        branch_resp = self.client.post(
+            "/api/v1/organizations/branches/",
+            {"name": "Unauthorized Branch", "code": "UB-1"},
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(org.id),
+        )
+        assert branch_resp.status_code == status.HTTP_403_FORBIDDEN
+
+        # 2. Member cannot create department (403)
+        dept_resp = self.client.post(
+            "/api/v1/organizations/departments/",
+            {"name": "Unauthorized Dept", "code": "UDEP"},
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(org.id),
+        )
+        assert dept_resp.status_code == status.HTTP_403_FORBIDDEN

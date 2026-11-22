@@ -69,7 +69,20 @@ class DonorListCreateView(APIView):
         ]
 
     def get(self, request: Request) -> Response:
-        donors = list_donors(organization_id=request.org_context.organization_id)
+        try:
+            limit = max(1, min(int(request.query_params.get("limit", 100)), 500))
+        except ValueError, TypeError:
+            limit = 100
+        try:
+            offset = max(0, int(request.query_params.get("offset", 0)))
+        except ValueError, TypeError:
+            offset = 0
+
+        donors = list_donors(
+            organization_id=request.org_context.organization_id,
+            limit=limit,
+            offset=offset,
+        )
         return Response(DonorResponseSerializer(donors, many=True).data)
 
     def post(self, request: Request) -> Response:
@@ -123,7 +136,21 @@ class GrantListCreateView(APIView):
     def get(self, request: Request) -> Response:
         donor_id_raw = request.query_params.get("donor_id")
         donor_id = uuid.UUID(donor_id_raw) if donor_id_raw else None
-        grants = list_grants(organization_id=request.org_context.organization_id, donor_id=donor_id)
+        try:
+            limit = max(1, min(int(request.query_params.get("limit", 100)), 500))
+        except ValueError, TypeError:
+            limit = 100
+        try:
+            offset = max(0, int(request.query_params.get("offset", 0)))
+        except ValueError, TypeError:
+            offset = 0
+
+        grants = list_grants(
+            organization_id=request.org_context.organization_id,
+            donor_id=donor_id,
+            limit=limit,
+            offset=offset,
+        )
         return Response(GrantResponseSerializer(grants, many=True).data)
 
     def post(self, request: Request) -> Response:
@@ -181,7 +208,21 @@ class DonationListCreateView(APIView):
     def get(self, request: Request) -> Response:
         donor_id_raw = request.query_params.get("donor_id")
         donor_id = uuid.UUID(donor_id_raw) if donor_id_raw else None
-        donations = list_donations(organization_id=request.org_context.organization_id, donor_id=donor_id)
+        try:
+            limit = max(1, min(int(request.query_params.get("limit", 100)), 500))
+        except ValueError, TypeError:
+            limit = 100
+        try:
+            offset = max(0, int(request.query_params.get("offset", 0)))
+        except ValueError, TypeError:
+            offset = 0
+
+        donations = list_donations(
+            organization_id=request.org_context.organization_id,
+            donor_id=donor_id,
+            limit=limit,
+            offset=offset,
+        )
         return Response(DonationResponseSerializer(donations, many=True).data)
 
     def post(self, request: Request) -> Response:

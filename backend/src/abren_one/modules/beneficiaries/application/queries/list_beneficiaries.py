@@ -21,6 +21,8 @@ def execute(
     organization_id: UUID,
     status: str | None = None,
     beneficiary_type: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
 ) -> list[BeneficiarySummaryResult]:
     """List beneficiaries for an organization, with optional status and type filters."""
     qs = Beneficiary.objects.filter(organization_id=organization_id)
@@ -40,5 +42,5 @@ def execute(
             vulnerability_level=b.vulnerability_level,
             is_active=b.is_active,
         )
-        for b in qs
+        for b in qs[offset : offset + limit]
     ]

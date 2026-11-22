@@ -25,6 +25,8 @@ class JournalEntrySummaryResult:
 def execute(
     context: ExecutionContext,
     status: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
 ) -> list[JournalEntrySummaryResult]:
     """List journal entries for the active organization (§6.2)."""
     if context.organization_id is None:
@@ -34,7 +36,9 @@ def execute(
     if status:
         qs = qs.filter(status=status)
 
-    entries = qs.annotate(total_debits=Sum("lines__debit")).order_by("-entry_date", "-created_at")
+    entries = qs.annotate(total_debits=Sum("lines__debit")).order_by("-entry_date", "-created_at")[
+        offset : offset + limit
+    ]
 
     return [
         JournalEntrySummaryResult(

@@ -15,9 +15,13 @@ class DonorSummaryResult:
     is_active: bool
 
 
-def execute(organization_id: UUID) -> list[DonorSummaryResult]:
+def execute(
+    organization_id: UUID,
+    limit: int = 100,
+    offset: int = 0,
+) -> list[DonorSummaryResult]:
     """List all donors belonging to the active organization (§6.3)."""
-    donors = Donor.objects.filter(organization_id=organization_id).order_by("name")
+    donors = Donor.objects.filter(organization_id=organization_id).order_by("name")[offset : offset + limit]
     return [
         DonorSummaryResult(
             id=d.id,

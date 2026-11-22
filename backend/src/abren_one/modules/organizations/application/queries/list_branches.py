@@ -14,9 +14,14 @@ class BranchSummaryResult:
     is_active: bool
 
 
-def execute(*, organization_id: UUID) -> list[BranchSummaryResult]:
+def execute(
+    *,
+    organization_id: UUID,
+    limit: int = 100,
+    offset: int = 0,
+) -> list[BranchSummaryResult]:
     """List all branches belonging to the organization."""
-    branches = Branch.objects.filter(organization_id=organization_id).order_by("name")
+    branches = Branch.objects.filter(organization_id=organization_id).order_by("name")[offset : offset + limit]
     return [
         BranchSummaryResult(
             id=b.id,

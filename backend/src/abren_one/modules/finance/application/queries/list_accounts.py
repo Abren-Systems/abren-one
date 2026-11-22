@@ -20,6 +20,8 @@ def execute(
     context: ExecutionContext,
     account_type: str | None = None,
     is_active: bool | None = None,
+    limit: int = 100,
+    offset: int = 0,
 ) -> list[AccountSummaryResult]:
     """List all accounts for the active organization (§6.2)."""
     if context.organization_id is None:
@@ -40,5 +42,5 @@ def execute(
             currency=acc.currency,
             is_active=acc.is_active,
         )
-        for acc in qs
+        for acc in qs[offset : offset + limit]
     ]

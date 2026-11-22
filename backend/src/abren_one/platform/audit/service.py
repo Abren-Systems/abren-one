@@ -18,6 +18,7 @@ def record_audit_event(
     target_id: UUID,
     correlation_id: UUID,
     outcome: str = "success",
+    actor_role: str | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> AuditEvent:
     """Record a business audit event committed atomically with the operation (§8.4).
@@ -27,6 +28,7 @@ def record_audit_event(
     return AuditEvent.objects.create(
         actor_type=actor_type,
         actor_id=actor_id,
+        actor_role=actor_role,
         organization_id=organization_id,
         action=action,
         target_type=target_type,
@@ -47,6 +49,7 @@ def record_security_event(
     target_id: UUID,
     correlation_id: UUID,
     outcome: str = "denied",
+    actor_role: str | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> AuditEvent:
     """Record a denied or failed security event independently (§8.4, ADR-005).
@@ -61,6 +64,7 @@ def record_security_event(
         return AuditEvent.objects.create(
             actor_type=actor_type,
             actor_id=actor_id,
+            actor_role=actor_role,
             organization_id=organization_id,
             action=action,
             target_type=target_type,
@@ -74,6 +78,7 @@ def record_security_event(
         return AuditEvent.objects.create(
             actor_type=actor_type,
             actor_id=actor_id,
+            actor_role=actor_role,
             organization_id=organization_id,
             action=action,
             target_type=target_type,

@@ -13,9 +13,14 @@ class ProgramSummaryResult:
     is_active: bool
 
 
-def execute(*, organization_id: UUID) -> list[ProgramSummaryResult]:
+def execute(
+    *,
+    organization_id: UUID,
+    limit: int = 100,
+    offset: int = 0,
+) -> list[ProgramSummaryResult]:
     """List all programs for the active organization."""
-    programs = Program.objects.filter(organization_id=organization_id).order_by("name")
+    programs = Program.objects.filter(organization_id=organization_id).order_by("name")[offset : offset + limit]
     return [
         ProgramSummaryResult(
             id=p.id,

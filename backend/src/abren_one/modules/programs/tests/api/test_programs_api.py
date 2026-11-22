@@ -266,3 +266,46 @@ class TestProgramsAPI:
             HTTP_X_ORGANIZATION_ID=str(self.org_id),
         )
         assert act_resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_rbac_permission_denial_for_member_role(self) -> None:
+        from rest_framework.test import APIClient
+
+        from abren_one.modules.organizations.public import AddMemberInput, add_member
+
+        member_user = User.objects.create_user(username="prog_member", password="password123")
+        admin_ctx = ExecutionContext(
+            actor_type=ActorType.USER,
+            actor_id=self.user.id,
+            organization_id=self.org_id,
+            correlation_id=uuid.uuid4(),
+            actor_role="owner",
+        )
+        add_member(
+            AddMemberInput(
+                context=admin_ctx,
+                user_id=member_user.id,
+                role="member",
+            )
+        )
+
+        member_client = APIClient()
+        member_client.force_authenticate(user=member_user)
+
+        # Member can view programs
+        resp_view = member_client.get(
+            "/api/v1/programs/",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert resp_view.status_code == status.HTTP_200_OK
+
+        # Member cannot create program (403 Forbidden)
+        resp_create = member_client.post(
+            "/api/v1/programs/",
+            {
+                "name": "Member Unauthorized Program",
+                "description": "Should fail",
+            },
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert resp_create.status_code == status.HTTP_403_FORBIDDEN

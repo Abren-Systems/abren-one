@@ -15,10 +15,17 @@ class MemberSummaryResult:
     is_active: bool
 
 
-def execute(*, organization_id: UUID) -> list[MemberSummaryResult]:
+def execute(
+    *,
+    organization_id: UUID,
+    limit: int = 100,
+    offset: int = 0,
+) -> list[MemberSummaryResult]:
     """List all members belonging to the organization."""
     memberships = (
-        Membership.objects.filter(organization_id=organization_id).select_related("user").order_by("-created_at")
+        Membership.objects.filter(organization_id=organization_id)
+        .select_related("user")
+        .order_by("-created_at")[offset : offset + limit]
     )
     return [
         MemberSummaryResult(

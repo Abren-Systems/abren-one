@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from abren_one.platform.common.exceptions import DomainError, NotFoundError
 
-class FinanceDomainError(Exception):
+
+class FinanceDomainError(DomainError):
     """Base exception for domain errors in Finance."""
 
 
@@ -27,9 +29,9 @@ class CurrencyMismatchError(FinanceDomainError):
     """Raised when journal lines or accounts have incompatible currencies."""
 
 
-class AccountNotFoundError(FinanceDomainError):
+class AccountNotFoundError(NotFoundError, FinanceDomainError):
     """Raised when an account is not found in the current organization."""
 
 
-class JournalEntryNotFoundError(FinanceDomainError):
+class JournalEntryNotFoundError(NotFoundError, FinanceDomainError):
     """Raised when a journal entry is not found in the current organization."""

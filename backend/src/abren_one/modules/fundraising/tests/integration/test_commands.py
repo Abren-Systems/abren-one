@@ -24,10 +24,14 @@ from abren_one.modules.fundraising.application.commands.record_donation import (
     execute as record_donation,
 )
 from abren_one.modules.fundraising.application.exceptions import (
+    DonationNotFoundError,
     FundraisingError,
     GrantMismatchError,
     InactiveDonorError,
     InvalidDonationAmountError,
+)
+from abren_one.modules.fundraising.application.queries.get_donation import (
+    execute as get_donation,
 )
 from abren_one.modules.fundraising.application.queries.get_donor import (
     execute as get_donor,
@@ -281,3 +285,31 @@ class TestFundraisingCommandsAndQueries:
                     amount=Decimal("0.00"),
                 )
             )
+
+    def test_get_donation_query_success_and_tenant_isolation(self) -> None:
+        donor = create_donor(CreateDonorInput(context=self.context, name="Generous Donor"))
+        donation = record_donation(
+            RecordDonationInput(
+                context=self.context,
+                donor_id=donor.donor_id,
+                amount=Decimal("1500.00"),
+                currency="USD",
+            )
+        )
+
+        # 1. Success lookup
+        result = get_donation(donation_id=donation.donation_id, organization_id=self.org_id)
+        assert result.id == donation.donation_id
+        assert result.organization_id == self.org_id
+        assert result.donor_name == "Generous Donor"
+        assert result.amount == Decimal("1500.00")
+        assert result.currency == "USD"
+
+        # 2. Cross-tenant isolation (foreign org ID)
+        other_org_id = uuid.uuid4()
+        with pytest.raises(DonationNotFoundError, match="not found"):
+            get_donation(donation_id=donation.donation_id, organization_id=other_org_id)
+
+        # 3. Nonexistent donation ID
+        with pytest.raises(DonationNotFoundError, match="not found"):
+            get_donation(donation_id=uuid.uuid4(), organization_id=self.org_id)

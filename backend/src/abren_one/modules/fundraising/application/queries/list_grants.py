@@ -18,13 +18,18 @@ class GrantSummaryResult:
     is_active: bool
 
 
-def execute(organization_id: UUID, donor_id: UUID | None = None) -> list[GrantSummaryResult]:
+def execute(
+    organization_id: UUID,
+    donor_id: UUID | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> list[GrantSummaryResult]:
     """List grants for the active organization (§6.3)."""
     qs = Grant.objects.filter(organization_id=organization_id)
     if donor_id is not None:
         qs = qs.filter(donor_id=donor_id)
 
-    grants = qs.order_by("-start_date")
+    grants = qs.order_by("-start_date")[offset : offset + limit]
     return [
         GrantSummaryResult(
             id=g.id,
