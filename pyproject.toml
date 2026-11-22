@@ -106,6 +106,8 @@ source_modules = [
     "abren_one.modules.finance.application",
     "abren_one.modules.procurement.domain",
     "abren_one.modules.procurement.application",
+    "abren_one.modules.inventory.domain",
+    "abren_one.modules.inventory.application",
 ]
 forbidden_modules = ["rest_framework"]
 
@@ -161,6 +163,15 @@ layers = [
     "abren_one.modules.procurement.interfaces",
     "abren_one.modules.procurement.application",
     "abren_one.modules.procurement.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "Inventory internal layer direction"
+type = "layers"
+layers = [
+    "abren_one.modules.inventory.interfaces",
+    "abren_one.modules.inventory.application",
+    "abren_one.modules.inventory.domain",
 ]
 
 # Cross-module public.py enforcement is handled by the architecture pytest

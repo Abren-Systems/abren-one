@@ -368,6 +368,7 @@ class TestBusinessModulesExist:
             "beneficiaries",
             "finance",
             "procurement",
+            "inventory",
         }
         if not modules_root.exists():
             pytest.skip("modules/ directory does not exist yet")

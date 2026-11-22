@@ -54,4 +54,14 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
     "procurement:receipts:view": {Role.OWNER, Role.ADMIN, Role.STAFF, Role.MEMBER},
     "procurement:receipts:record": {Role.OWNER, Role.ADMIN, Role.STAFF},
     "procurement:receipts:inspect": {Role.OWNER, Role.ADMIN, Role.STAFF},
+    # Inventory permissions
+    "inventory:items:view": {Role.OWNER, Role.ADMIN, Role.STAFF, Role.MEMBER},
+    "inventory:items:manage": {Role.OWNER, Role.ADMIN, Role.STAFF},
+    "inventory:warehouses:view": {Role.OWNER, Role.ADMIN, Role.STAFF, Role.MEMBER},
+    "inventory:warehouses:manage": {Role.OWNER, Role.ADMIN},
+    "inventory:stock:view": {Role.OWNER, Role.ADMIN, Role.STAFF, Role.MEMBER},
+    "inventory:stock:receive": {Role.OWNER, Role.ADMIN, Role.STAFF},
+    "inventory:stock:transfer": {Role.OWNER, Role.ADMIN, Role.STAFF},
+    "inventory:stock:issue": {Role.OWNER, Role.ADMIN, Role.STAFF},
+    "inventory:stock:adjust": {Role.OWNER, Role.ADMIN},
 }
