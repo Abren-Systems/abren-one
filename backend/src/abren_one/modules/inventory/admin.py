@@ -4,6 +4,9 @@ from abren_one.modules.inventory.models import (
     Item,
     ItemBatch,
     ItemCategory,
+    StockBalance,
+    StockLedgerEntry,
+    StockTransaction,
     StorageLocation,
     Warehouse,
 )
@@ -19,6 +22,23 @@ class StorageLocationInline(admin.TabularInline):
     model = StorageLocation
     extra = 0
     readonly_fields = ["created_at"]
+
+
+class StockLedgerEntryInline(admin.TabularInline):
+    model = StockLedgerEntry
+    extra = 0
+    readonly_fields = [
+        "item",
+        "batch",
+        "warehouse",
+        "location",
+        "quantity",
+        "unit_cost",
+        "program_id",
+        "activity_id",
+        "created_at",
+    ]
+    can_delete = False
 
 
 @admin.register(ItemCategory)
@@ -64,3 +84,62 @@ class ItemBatchAdmin(admin.ModelAdmin):
 class StorageLocationAdmin(admin.ModelAdmin):
     list_display = ["warehouse", "name", "code", "is_active"]
     search_fields = ["name", "code", "warehouse__name"]
+
+
+@admin.register(StockTransaction)
+class StockTransactionAdmin(admin.ModelAdmin):
+    list_display = [
+        "transaction_number",
+        "transaction_type",
+        "status",
+        "source_warehouse",
+        "destination_warehouse",
+        "transaction_date",
+        "organization",
+    ]
+    search_fields = ["transaction_number", "reference_document", "donor_name"]
+    list_filter = ["transaction_type", "status", "organization"]
+    inlines = [StockLedgerEntryInline]
+    readonly_fields = ["created_at", "updated_at"]
+
+
+@admin.register(StockLedgerEntry)
+class StockLedgerEntryAdmin(admin.ModelAdmin):
+    list_display = [
+        "transaction",
+        "item",
+        "batch",
+        "warehouse",
+        "quantity",
+        "unit_cost",
+        "created_at",
+    ]
+    search_fields = ["item__name", "item__item_code", "transaction__transaction_number"]
+    list_filter = ["warehouse", "organization"]
+    readonly_fields = [
+        "transaction",
+        "item",
+        "batch",
+        "warehouse",
+        "location",
+        "quantity",
+        "unit_cost",
+        "program_id",
+        "activity_id",
+        "created_at",
+    ]
+
+
+@admin.register(StockBalance)
+class StockBalanceAdmin(admin.ModelAdmin):
+    list_display = [
+        "item",
+        "warehouse",
+        "location",
+        "batch",
+        "quantity_on_hand",
+        "quantity_reserved",
+        "organization",
+    ]
+    search_fields = ["item__name", "item__item_code", "warehouse__name", "warehouse__code"]
+    list_filter = ["warehouse", "organization"]
