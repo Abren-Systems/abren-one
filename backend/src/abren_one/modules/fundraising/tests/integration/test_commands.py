@@ -87,6 +87,7 @@ class TestFundraisingCommandsAndQueries:
             actor_id=self.user.id,
             organization_id=self.org_id,
             correlation_id=self.correlation_id,
+            actor_role="admin",
         )
 
     def test_create_donor_and_audit(self) -> None:

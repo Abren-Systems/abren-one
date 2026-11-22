@@ -62,3 +62,41 @@ class TestOrganizationMembershipVerifier:
         assert result is not None
         assert result.role == "owner"
         assert result.is_active is True
+
+    def test_get_membership_is_inactive_when_org_is_suspended(self) -> None:
+        user = User.objects.create_user(username="suspended_org_user", password="password")
+        org = Organization.objects.create(
+            name="Suspended Org",
+            slug="suspended-org",
+            status=OrganizationStatus.SUSPENDED.value,
+        )
+        Membership.objects.create(
+            organization=org,
+            user=user,
+            role=MembershipRole.MEMBER.value,
+            status=MembershipStatus.ACTIVE.value,
+        )
+
+        verifier = OrganizationMembershipVerifier()
+        result = verifier.get_membership(user_id=user.id, organization_id=org.id)
+        assert result is not None
+        assert result.is_active is False
+
+    def test_get_membership_is_inactive_when_membership_status_is_inactive(self) -> None:
+        user = User.objects.create_user(username="inactive_member_user", password="password")
+        org = Organization.objects.create(
+            name="Active Org Inactive Member",
+            slug="active-org-inactive-member",
+            status=OrganizationStatus.ACTIVE.value,
+        )
+        Membership.objects.create(
+            organization=org,
+            user=user,
+            role=MembershipRole.MEMBER.value,
+            status=MembershipStatus.SUSPENDED.value,
+        )
+
+        verifier = OrganizationMembershipVerifier()
+        result = verifier.get_membership(user_id=user.id, organization_id=org.id)
+        assert result is not None
+        assert result.is_active is False

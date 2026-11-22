@@ -39,6 +39,7 @@ class ExecutionContext:
     actor_id: UUID | None
     organization_id: UUID | None
     correlation_id: UUID
+    actor_role: str | None = None
 
 
 def build_execution_context(request: Any) -> ExecutionContext:
@@ -69,8 +70,10 @@ def build_execution_context(request: Any) -> ExecutionContext:
         actor_id = getattr(user, "id", None)
 
     org_id: UUID | None = None
+    actor_role: str | None = None
     if hasattr(request, "org_context") and request.org_context is not None:
         org_id = getattr(request.org_context, "organization_id", None)
+        actor_role = getattr(request.org_context, "role", None)
 
     correlation_id: UUID = getattr(request, "correlation_id", None) or uuid.uuid4()
 
@@ -79,6 +82,7 @@ def build_execution_context(request: Any) -> ExecutionContext:
         actor_id=actor_id,
         organization_id=org_id,
         correlation_id=correlation_id,
+        actor_role=actor_role,
     )
 
 

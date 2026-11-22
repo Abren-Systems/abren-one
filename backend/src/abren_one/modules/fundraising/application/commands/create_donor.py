@@ -13,6 +13,7 @@ from abren_one.modules.fundraising.domain.value_objects import (
 from abren_one.modules.fundraising.models import Donor
 from abren_one.modules.organizations.public import get_organization
 from abren_one.platform.audit.service import record_audit_event
+from abren_one.platform.authorization import check_permission
 from abren_one.platform.common.context import ExecutionContext
 
 
@@ -33,6 +34,8 @@ class CreateDonorResult:
 @transaction.atomic
 def execute(data: CreateDonorInput) -> CreateDonorResult:
     """Create a new donor in the active organization (§6.2)."""
+    check_permission(data.context, "donors:manage")
+
     if data.context.organization_id is None:
         raise FundraisingError("Organization context is required.")
     org_id = data.context.organization_id

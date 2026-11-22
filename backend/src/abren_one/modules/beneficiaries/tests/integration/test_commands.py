@@ -76,6 +76,7 @@ class TestBeneficiaryCommandsAndQueries:
             actor_id=uuid.uuid4(),
             organization_id=org.organization_id,
             correlation_id=uuid.uuid4(),
+            actor_role="admin",
         )
 
         res = register_beneficiary(
@@ -137,6 +138,7 @@ class TestBeneficiaryCommandsAndQueries:
             actor_id=uuid.uuid4(),
             organization_id=org.organization_id,
             correlation_id=uuid.uuid4(),
+            actor_role="admin",
         )
 
         res = register_beneficiary(
@@ -200,6 +202,7 @@ class TestBeneficiaryCommandsAndQueries:
             actor_id=uuid.uuid4(),
             organization_id=org.organization_id,
             correlation_id=uuid.uuid4(),
+            actor_role="admin",
         )
 
         prog = create_program(CreateProgramInput(context=ctx, name="Emergency Nutrition"))

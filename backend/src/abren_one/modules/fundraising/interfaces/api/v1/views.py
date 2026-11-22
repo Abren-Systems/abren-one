@@ -47,6 +47,7 @@ from abren_one.modules.fundraising.interfaces.api.v1.serializers import (
     GrantResponseSerializer,
     RecordDonationRequestSerializer,
 )
+from abren_one.platform.authorization.permissions import require_permission
 from abren_one.platform.common.context import build_execution_context
 from abren_one.platform.tenancy.permissions import HasOrganizationContext
 
@@ -54,7 +55,18 @@ from abren_one.platform.tenancy.permissions import HasOrganizationContext
 class DonorListCreateView(APIView):
     """List and create donors for the active organization (§7.2)."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [
+                IsAuthenticated(),
+                HasOrganizationContext(),
+                require_permission("donors:manage")(),
+            ]
+        return [
+            IsAuthenticated(),
+            HasOrganizationContext(),
+            require_permission("donors:view")(),
+        ]
 
     def get(self, request: Request) -> Response:
         donors = list_donors(organization_id=request.org_context.organization_id)
@@ -81,7 +93,11 @@ class DonorListCreateView(APIView):
 class DonorDetailView(APIView):
     """Retrieve donor details within the active organization (§7.2)."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    permission_classes = [
+        IsAuthenticated,
+        HasOrganizationContext,
+        require_permission("donors:view"),
+    ]
 
     def get(self, request: Request, donor_id: uuid.UUID) -> Response:
         donor = get_donor(donor_id=donor_id, organization_id=request.org_context.organization_id)
@@ -91,7 +107,18 @@ class DonorDetailView(APIView):
 class GrantListCreateView(APIView):
     """List and create grants for the active organization (§7.2)."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [
+                IsAuthenticated(),
+                HasOrganizationContext(),
+                require_permission("grants:manage")(),
+            ]
+        return [
+            IsAuthenticated(),
+            HasOrganizationContext(),
+            require_permission("grants:view")(),
+        ]
 
     def get(self, request: Request) -> Response:
         donor_id_raw = request.query_params.get("donor_id")
@@ -124,7 +151,11 @@ class GrantListCreateView(APIView):
 class GrantDetailView(APIView):
     """Retrieve grant details within the active organization (§7.2)."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    permission_classes = [
+        IsAuthenticated,
+        HasOrganizationContext,
+        require_permission("grants:view"),
+    ]
 
     def get(self, request: Request, grant_id: uuid.UUID) -> Response:
         grant = get_grant(grant_id=grant_id, organization_id=request.org_context.organization_id)
@@ -134,7 +165,18 @@ class GrantDetailView(APIView):
 class DonationListCreateView(APIView):
     """List and record donations for the active organization (§7.2)."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [
+                IsAuthenticated(),
+                HasOrganizationContext(),
+                require_permission("donations:record")(),
+            ]
+        return [
+            IsAuthenticated(),
+            HasOrganizationContext(),
+            require_permission("donations:view")(),
+        ]
 
     def get(self, request: Request) -> Response:
         donor_id_raw = request.query_params.get("donor_id")

@@ -74,6 +74,7 @@ from abren_one.modules.programs.interfaces.api.v1.serializers import (
     UpdateProgramRequestSerializer,
     UpdateProjectRequestSerializer,
 )
+from abren_one.platform.authorization.permissions import require_permission
 from abren_one.platform.common.context import build_execution_context
 from abren_one.platform.tenancy.permissions import HasOrganizationContext
 
@@ -81,7 +82,18 @@ from abren_one.platform.tenancy.permissions import HasOrganizationContext
 class ProgramListCreateView(APIView):
     """List and create programs for the active organization (§7.2)."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [
+                IsAuthenticated(),
+                HasOrganizationContext(),
+                require_permission("programs:manage")(),
+            ]
+        return [
+            IsAuthenticated(),
+            HasOrganizationContext(),
+            require_permission("programs:view")(),
+        ]
 
     def get(self, request: Request) -> Response:
         programs = list_programs(organization_id=request.org_context.organization_id)
@@ -108,7 +120,18 @@ class ProgramListCreateView(APIView):
 class ProgramDetailView(APIView):
     """Retrieve or update details for a specific program (§7.2)."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    def get_permissions(self):
+        if self.request.method == "PATCH":
+            return [
+                IsAuthenticated(),
+                HasOrganizationContext(),
+                require_permission("programs:manage")(),
+            ]
+        return [
+            IsAuthenticated(),
+            HasOrganizationContext(),
+            require_permission("programs:view")(),
+        ]
 
     def get(self, request: Request, program_id: uuid.UUID) -> Response:
         result = get_program(
@@ -139,7 +162,18 @@ class ProgramDetailView(APIView):
 class ProjectListCreateView(APIView):
     """List and create projects for the active organization."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [
+                IsAuthenticated(),
+                HasOrganizationContext(),
+                require_permission("projects:manage")(),
+            ]
+        return [
+            IsAuthenticated(),
+            HasOrganizationContext(),
+            require_permission("programs:view")(),
+        ]
 
     def get(self, request: Request) -> Response:
         program_id_raw = request.query_params.get("program_id")
@@ -170,7 +204,18 @@ class ProjectListCreateView(APIView):
 class ProjectDetailView(APIView):
     """Retrieve or update details for a specific project."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    def get_permissions(self):
+        if self.request.method == "PATCH":
+            return [
+                IsAuthenticated(),
+                HasOrganizationContext(),
+                require_permission("projects:manage")(),
+            ]
+        return [
+            IsAuthenticated(),
+            HasOrganizationContext(),
+            require_permission("programs:view")(),
+        ]
 
     def get(self, request: Request, project_id: uuid.UUID) -> Response:
         project = get_project(
@@ -200,7 +245,18 @@ class ProjectDetailView(APIView):
 class ActivityListCreateView(APIView):
     """List and create activities for the active organization."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [
+                IsAuthenticated(),
+                HasOrganizationContext(),
+                require_permission("activities:manage")(),
+            ]
+        return [
+            IsAuthenticated(),
+            HasOrganizationContext(),
+            require_permission("programs:view")(),
+        ]
 
     def get(self, request: Request) -> Response:
         project_id_raw = request.query_params.get("project_id")
@@ -230,7 +286,18 @@ class ActivityListCreateView(APIView):
 class ActivityDetailView(APIView):
     """Retrieve or update details for a specific activity."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    def get_permissions(self):
+        if self.request.method == "PATCH":
+            return [
+                IsAuthenticated(),
+                HasOrganizationContext(),
+                require_permission("activities:manage")(),
+            ]
+        return [
+            IsAuthenticated(),
+            HasOrganizationContext(),
+            require_permission("programs:view")(),
+        ]
 
     def get(self, request: Request, activity_id: uuid.UUID) -> Response:
         activity = get_activity(

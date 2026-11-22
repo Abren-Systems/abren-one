@@ -22,7 +22,7 @@ def execute(*, organization_id: UUID, user_id: UUID) -> MembershipResult | None:
     Returns None if no membership exists.
     """
     try:
-        membership = Membership.objects.get(
+        membership = Membership.objects.select_related("organization").get(
             organization_id=organization_id,
             user_id=user_id,
         )

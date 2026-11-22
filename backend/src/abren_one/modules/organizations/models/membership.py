@@ -52,4 +52,4 @@ class Membership(TimestampMixin, models.Model):
 
     @property
     def is_active(self) -> bool:
-        return self.status == MembershipStatus.ACTIVE.value
+        return self.status == MembershipStatus.ACTIVE.value and self.organization.is_active

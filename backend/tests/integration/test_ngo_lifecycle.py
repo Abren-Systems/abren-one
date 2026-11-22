@@ -110,6 +110,7 @@ class TestNgoLifecycleWorkflow:
             actor_id=actor_id,
             organization_id=org_id,
             correlation_id=correlation_id,
+            actor_role="owner",
         )
 
         branch_res = create_branch(
@@ -409,10 +410,18 @@ class TestNgoLifecycleWorkflow:
         ).organization_id
 
         ctx_a = ExecutionContext(
-            actor_type=ActorType.USER, actor_id=actor_id, organization_id=org_a, correlation_id=corr_id
+            actor_type=ActorType.USER,
+            actor_id=actor_id,
+            organization_id=org_a,
+            correlation_id=corr_id,
+            actor_role="owner",
         )
         ctx_b = ExecutionContext(
-            actor_type=ActorType.USER, actor_id=actor_id, organization_id=org_b, correlation_id=corr_id
+            actor_type=ActorType.USER,
+            actor_id=actor_id,
+            organization_id=org_b,
+            correlation_id=corr_id,
+            actor_role="owner",
         )
 
         # Beneficiary registered in Org A

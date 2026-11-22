@@ -61,6 +61,7 @@ from abren_one.modules.finance.interfaces.api.v1.serializers import (
     ReverseJournalEntryRequestSerializer,
     TrialBalanceResponseSerializer,
 )
+from abren_one.platform.authorization.permissions import require_permission
 from abren_one.platform.common.context import build_execution_context
 from abren_one.platform.tenancy.permissions import HasOrganizationContext
 
@@ -68,7 +69,18 @@ from abren_one.platform.tenancy.permissions import HasOrganizationContext
 class AccountListCreateView(APIView):
     """List and create Chart of Accounts (§7.2)."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [
+                IsAuthenticated(),
+                HasOrganizationContext(),
+                require_permission("finance:accounts:manage")(),
+            ]
+        return [
+            IsAuthenticated(),
+            HasOrganizationContext(),
+            require_permission("finance:accounts:view")(),
+        ]
 
     def get(self, request: Request) -> Response:
         ctx = build_execution_context(request)
@@ -121,7 +133,11 @@ class AccountListCreateView(APIView):
 class AccountDetailView(APIView):
     """Retrieve an account by ID (§7.2)."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    permission_classes = [
+        IsAuthenticated,
+        HasOrganizationContext,
+        require_permission("finance:accounts:view"),
+    ]
 
     def get(self, request: Request, account_id: uuid.UUID) -> Response:
         ctx = build_execution_context(request)
@@ -136,7 +152,18 @@ class AccountDetailView(APIView):
 class JournalEntryListCreateView(APIView):
     """List and create journal entries (§7.2)."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [
+                IsAuthenticated(),
+                HasOrganizationContext(),
+                require_permission("finance:journal_entries:create")(),
+            ]
+        return [
+            IsAuthenticated(),
+            HasOrganizationContext(),
+            require_permission("finance:journal_entries:view")(),
+        ]
 
     def get(self, request: Request) -> Response:
         ctx = build_execution_context(request)
@@ -194,7 +221,11 @@ class JournalEntryListCreateView(APIView):
 class JournalEntryDetailView(APIView):
     """Retrieve full journal entry details with lines (§7.2)."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    permission_classes = [
+        IsAuthenticated,
+        HasOrganizationContext,
+        require_permission("finance:journal_entries:view"),
+    ]
 
     def get(self, request: Request, journal_entry_id: uuid.UUID) -> Response:
         ctx = build_execution_context(request)
@@ -209,7 +240,11 @@ class JournalEntryDetailView(APIView):
 class JournalEntryPostView(APIView):
     """Post a draft journal entry to the ledger (§7.2)."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    permission_classes = [
+        IsAuthenticated,
+        HasOrganizationContext,
+        require_permission("finance:journal_entries:post"),
+    ]
 
     def post(self, request: Request, journal_entry_id: uuid.UUID) -> Response:
         ctx = build_execution_context(request)
@@ -238,7 +273,11 @@ class JournalEntryPostView(APIView):
 class JournalEntryReverseView(APIView):
     """Reverse a posted journal entry with offsetting lines (§7.2)."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    permission_classes = [
+        IsAuthenticated,
+        HasOrganizationContext,
+        require_permission("finance:journal_entries:reverse"),
+    ]
 
     def post(self, request: Request, journal_entry_id: uuid.UUID) -> Response:
         serializer = ReverseJournalEntryRequestSerializer(data=request.data)
@@ -273,7 +312,11 @@ class JournalEntryReverseView(APIView):
 class TrialBalanceView(APIView):
     """Retrieve the Trial Balance for the active organization (§7.2)."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    permission_classes = [
+        IsAuthenticated,
+        HasOrganizationContext,
+        require_permission("finance:trial_balance:view"),
+    ]
 
     def get(self, request: Request) -> Response:
         ctx = build_execution_context(request)

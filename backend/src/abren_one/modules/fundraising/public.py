@@ -36,6 +36,12 @@ from abren_one.modules.fundraising.application.exceptions import (
     InvalidDonationAmountError,
     InvalidStateTransitionError,
 )
+from abren_one.modules.fundraising.application.queries.get_donation import (
+    GetDonationResult,
+)
+from abren_one.modules.fundraising.application.queries.get_donation import (
+    execute as get_donation,
+)
 from abren_one.modules.fundraising.application.queries.get_donor import (
     GetDonorResult,
 )
@@ -77,6 +83,7 @@ __all__ = [
     "DonorNotFoundError",
     "DonorSummaryResult",
     "FundraisingError",
+    "GetDonationResult",
     "GetDonorResult",
     "GetGrantResult",
     "GrantMismatchError",
@@ -89,6 +96,7 @@ __all__ = [
     "RecordDonationResult",
     "create_donor",
     "create_grant",
+    "get_donation",
     "get_donor",
     "get_grant",
     "list_donations",

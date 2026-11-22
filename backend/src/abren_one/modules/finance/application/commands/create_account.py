@@ -11,6 +11,7 @@ from abren_one.modules.finance.domain.value_objects import AccountType
 from abren_one.modules.finance.models import Account
 from abren_one.modules.organizations.public import get_organization
 from abren_one.platform.audit.service import record_audit_event
+from abren_one.platform.authorization import check_permission
 from abren_one.platform.common.context import ExecutionContext
 
 
@@ -37,6 +38,8 @@ class CreateAccountResult:
 @transaction.atomic
 def execute(data: CreateAccountInput) -> CreateAccountResult:
     """Create a new account in the Chart of Accounts (§6.2)."""
+    check_permission(data.context, "finance:accounts:manage")
+
     if data.context.organization_id is None:
         raise FinanceDomainError("Organization context is required.")
 

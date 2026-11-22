@@ -10,7 +10,7 @@ from abren_one.modules.finance.domain.exceptions import (
     ImmutableJournalEntryError,
     UnbalancedJournalEntryError,
 )
-from abren_one.modules.finance.models import JournalLine
+from abren_one.modules.finance.models import JournalEntry, JournalLine
 from abren_one.modules.finance.public import (
     AccountType,
     CreateAccountInput,
@@ -57,6 +57,7 @@ def org_context() -> tuple[uuid.UUID, ExecutionContext]:
         actor_id=actor_id,
         organization_id=org_res.organization_id,
         correlation_id=corr_id,
+        actor_role="admin",
     )
     return org_res.organization_id, ctx
 
@@ -346,4 +347,92 @@ class TestDatabaseConstraints:
                 account_id=acc.account_id,
                 debit=Decimal("10.00"),
                 credit=Decimal("10.00"),  # Violates finance_line_debit_xor_credit constraint
+            )
+
+    def test_posted_journal_entry_and_lines_are_immutable(
+        self,
+        org_context: tuple[uuid.UUID, ExecutionContext],
+    ):
+        org_id, ctx = org_context
+        cash = create_account(CreateAccountInput(context=ctx, code="1010", name="Cash"))
+        rev = create_account(CreateAccountInput(context=ctx, code="4010", name="Revenue", account_type="revenue"))
+
+        entry_res = create_journal_entry(
+            CreateJournalEntryInput(
+                context=ctx,
+                entry_date=date(2026, 11, 22),
+                memo="Posted entry",
+                lines=[
+                    JournalLineInput(account_id=cash.account_id, debit=Decimal("200.00")),
+                    JournalLineInput(account_id=rev.account_id, credit=Decimal("200.00")),
+                ],
+                post_immediately=True,
+            )
+        )
+        entry = JournalEntry.objects.get(id=entry_res.journal_entry_id)
+        line = entry.lines.first()
+        assert line is not None
+
+        # Cannot delete posted entry
+        with pytest.raises(ImmutableJournalEntryError, match="cannot be deleted"):
+            entry.delete()
+
+        # Cannot modify posted entry fields
+        entry.memo = "Tampered memo"
+        with pytest.raises(ImmutableJournalEntryError, match="cannot be modified"):
+            entry.save()
+
+        # Cannot delete or modify lines belonging to posted entry
+        with pytest.raises(ImmutableJournalEntryError, match="cannot be deleted"):
+            line.delete()
+
+        line.memo = "Tampered line memo"
+        with pytest.raises(ImmutableJournalEntryError, match="cannot be modified"):
+            line.save()
+
+    def test_soft_reference_validation_rejects_foreign_tenant_or_nonexistent_ids(
+        self,
+        org_context: tuple[uuid.UUID, ExecutionContext],
+    ):
+        org_id, ctx = org_context
+        cash = create_account(CreateAccountInput(context=ctx, code="1010", name="Cash"))
+        rev = create_account(CreateAccountInput(context=ctx, code="4010", name="Revenue", account_type="revenue"))
+
+        fake_program_id = uuid.uuid4()
+        with pytest.raises(FinanceDomainError, match=f"Program {fake_program_id} not found"):
+            create_journal_entry(
+                CreateJournalEntryInput(
+                    context=ctx,
+                    entry_date=date(2026, 11, 22),
+                    memo="Invalid program reference",
+                    lines=[
+                        JournalLineInput(account_id=cash.account_id, debit=Decimal("100.00")),
+                        JournalLineInput(account_id=rev.account_id, credit=Decimal("100.00")),
+                    ],
+                    program_id=fake_program_id,
+                )
+            )
+
+    def test_permission_denial_for_member_role(
+        self,
+        org_context: tuple[uuid.UUID, ExecutionContext],
+    ):
+        from django.core.exceptions import PermissionDenied
+
+        org_id, _ = org_context
+        member_ctx = ExecutionContext(
+            actor_type=ActorType.USER,
+            actor_id=uuid.uuid4(),
+            organization_id=org_id,
+            correlation_id=uuid.uuid4(),
+            actor_role="member",
+        )
+
+        with pytest.raises(PermissionDenied, match="Permission 'finance:accounts:manage' denied"):
+            create_account(
+                CreateAccountInput(
+                    context=member_ctx,
+                    code="9999",
+                    name="Unauthorized Account",
+                )
             )

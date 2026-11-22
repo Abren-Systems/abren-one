@@ -101,6 +101,7 @@ class TestProgramsCommandsAndQueries:
             actor_id=user.id,
             organization_id=org_result.organization_id,
             correlation_id=correlation_id,
+            actor_role="admin",
         )
 
         result = create_program(
@@ -138,6 +139,7 @@ class TestProgramsCommandsAndQueries:
             actor_id=uuid.uuid4(),
             organization_id=org_result.organization_id,
             correlation_id=uuid.uuid4(),
+            actor_role="admin",
         )
 
         create_program(CreateProgramInput(context=context, name="Literacy 2026"))
@@ -159,6 +161,7 @@ class TestProgramsCommandsAndQueries:
             actor_id=uuid.uuid4(),
             organization_id=org_a.organization_id,
             correlation_id=uuid.uuid4(),
+            actor_role="admin",
         )
         prog = create_program(CreateProgramInput(context=ctx_a, name="Org A Program"))
 
@@ -179,6 +182,7 @@ class TestProgramsCommandsAndQueries:
             actor_id=uuid.uuid4(),
             organization_id=org.organization_id,
             correlation_id=uuid.uuid4(),
+            actor_role="admin",
         )
 
         prog = create_program(CreateProgramInput(context=ctx, name="Initial Name"))
@@ -224,6 +228,7 @@ class TestProgramsCommandsAndQueries:
             actor_id=uuid.uuid4(),
             organization_id=org.organization_id,
             correlation_id=uuid.uuid4(),
+            actor_role="admin",
         )
 
         prog = create_program(CreateProgramInput(context=ctx, name="Main Program"))
@@ -296,6 +301,7 @@ class TestProgramsCommandsAndQueries:
             actor_id=uuid.uuid4(),
             organization_id=org.organization_id,
             correlation_id=uuid.uuid4(),
+            actor_role="admin",
         )
 
         prog = create_program(CreateProgramInput(context=ctx, name="Act Program"))

@@ -139,3 +139,45 @@ class TestFinanceAPI:
     def test_unauthorized_without_organization_context(self) -> None:
         resp = self.client.get("/api/v1/finance/accounts/")
         assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_rbac_permission_denial_for_member_role(self) -> None:
+        from abren_one.modules.organizations.public import AddMemberInput, add_member
+
+        member_user = User.objects.create_user(username="junior_member", password="password123")
+        admin_ctx = ExecutionContext(
+            actor_type=ActorType.USER,
+            actor_id=self.user.id,
+            organization_id=self.org_id,
+            correlation_id=uuid.uuid4(),
+            actor_role="owner",
+        )
+        add_member(
+            AddMemberInput(
+                context=admin_ctx,
+                user_id=member_user.id,
+                role="member",
+            )
+        )
+
+        member_client = APIClient()
+        member_client.force_authenticate(user=member_user)
+
+        # Member can view accounts
+        resp_view = member_client.get(
+            "/api/v1/finance/accounts/",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert resp_view.status_code == status.HTTP_200_OK
+
+        # Member cannot create account (403 Forbidden)
+        resp_create = member_client.post(
+            "/api/v1/finance/accounts/",
+            {
+                "code": "1999",
+                "name": "Member Created Account",
+                "account_type": "asset",
+            },
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert resp_create.status_code == status.HTTP_403_FORBIDDEN

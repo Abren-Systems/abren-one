@@ -12,6 +12,7 @@ from abren_one.modules.programs.domain.policies import can_transition_project_st
 from abren_one.modules.programs.domain.value_objects import ProjectStatus
 from abren_one.modules.programs.models import Project
 from abren_one.platform.audit.service import record_audit_event
+from abren_one.platform.authorization import check_permission
 from abren_one.platform.common.context import ExecutionContext
 
 
@@ -34,6 +35,8 @@ class UpdateProjectResult:
 @transaction.atomic
 def execute(data: UpdateProjectInput) -> UpdateProjectResult:
     """Update project details or transition its status (§6.2)."""
+    check_permission(data.context, "projects:manage")
+
     if data.context.organization_id is None:
         raise ProgramError("Organization context is required.")
 

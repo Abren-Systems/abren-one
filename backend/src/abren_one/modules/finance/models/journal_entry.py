@@ -2,6 +2,7 @@ import uuid
 
 from django.db import models
 
+from abren_one.modules.finance.domain.exceptions import ImmutableJournalEntryError
 from abren_one.modules.finance.domain.value_objects import JournalEntryStatus
 from abren_one.platform.common.models import OrgOwnedMixin, TimestampMixin
 
@@ -48,3 +49,25 @@ class JournalEntry(OrgOwnedMixin, TimestampMixin, models.Model):
 
     def __str__(self) -> str:
         return f"{self.entry_number} [{self.status}] {self.memo[:40]}"
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            orig = JournalEntry.objects.filter(pk=self.pk).values("status").first()
+            if orig is not None:
+                orig_status = orig["status"]
+                if orig_status == JournalEntryStatus.REVERSED.value:
+                    raise ImmutableJournalEntryError(
+                        f"Reversed journal entry '{self.entry_number}' is permanently immutable (§4.1, §6.2)."
+                    )
+                if orig_status == JournalEntryStatus.POSTED.value and self.status != JournalEntryStatus.REVERSED.value:
+                    raise ImmutableJournalEntryError(
+                        f"Posted journal entry '{self.entry_number}' cannot be modified (§4.1, §6.2)."
+                    )
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        if self.status in (JournalEntryStatus.POSTED.value, JournalEntryStatus.REVERSED.value):
+            raise ImmutableJournalEntryError(
+                f"Posted or reversed journal entry '{self.entry_number}' cannot be deleted (§4.1, §6.2)."
+            )
+        return super().delete(*args, **kwargs)

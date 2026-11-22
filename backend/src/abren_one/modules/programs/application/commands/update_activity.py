@@ -13,6 +13,7 @@ from abren_one.modules.programs.domain.policies import can_transition_activity_s
 from abren_one.modules.programs.domain.value_objects import ActivityStatus
 from abren_one.modules.programs.models import Activity
 from abren_one.platform.audit.service import record_audit_event
+from abren_one.platform.authorization import check_permission
 from abren_one.platform.common.context import ExecutionContext
 
 
@@ -34,6 +35,8 @@ class UpdateActivityResult:
 @transaction.atomic
 def execute(data: UpdateActivityInput) -> UpdateActivityResult:
     """Update activity details or transition its status (§6.2)."""
+    check_permission(data.context, "activities:manage")
+
     if data.context.organization_id is None:
         raise ProgramError("Organization context is required.")
 

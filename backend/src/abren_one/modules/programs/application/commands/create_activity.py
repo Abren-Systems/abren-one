@@ -14,6 +14,7 @@ from abren_one.modules.programs.domain.value_objects import (
 )
 from abren_one.modules.programs.models import Activity, Project
 from abren_one.platform.audit.service import record_audit_event
+from abren_one.platform.authorization import check_permission
 from abren_one.platform.common.context import ExecutionContext
 
 
@@ -33,6 +34,8 @@ class CreateActivityResult:
 @transaction.atomic
 def execute(data: CreateActivityInput) -> CreateActivityResult:
     """Create a new activity within a project and active organization (§6.2)."""
+    check_permission(data.context, "activities:manage")
+
     if data.context.organization_id is None:
         raise ProgramError("Organization context is required.")
 

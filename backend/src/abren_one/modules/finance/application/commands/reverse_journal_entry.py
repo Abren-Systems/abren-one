@@ -13,6 +13,7 @@ from abren_one.modules.finance.domain.value_objects import JournalEntryStatus
 from abren_one.modules.finance.models import JournalEntry, JournalLine
 from abren_one.modules.organizations.public import get_organization
 from abren_one.platform.audit.service import record_audit_event
+from abren_one.platform.authorization import check_permission
 from abren_one.platform.common.context import ExecutionContext
 
 
@@ -35,6 +36,8 @@ class ReverseJournalEntryResult:
 @transaction.atomic
 def execute(data: ReverseJournalEntryInput) -> ReverseJournalEntryResult:
     """Reverse a posted journal entry with an offsetting, balanced reversal entry (§6.2)."""
+    check_permission(data.context, "finance:journal_entries:reverse")
+
     if data.context.organization_id is None:
         raise FinanceDomainError("Organization context is required.")
 

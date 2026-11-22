@@ -23,6 +23,7 @@ from abren_one.modules.programs.public import (
     get_program,
 )
 from abren_one.platform.audit.service import record_audit_event
+from abren_one.platform.authorization import check_permission
 from abren_one.platform.common.context import ExecutionContext
 
 
@@ -53,6 +54,8 @@ def execute(data: RecordServiceDeliveryInput) -> RecordServiceDeliveryResult:
     - If program_id is provided, validates existence via Programs public API.
     - If activity_id is provided, validates existence via Programs public API.
     """
+    check_permission(data.context, "service_deliveries:record")
+
     if data.context.organization_id is None:
         raise BeneficiaryError("Organization context is required.")
 

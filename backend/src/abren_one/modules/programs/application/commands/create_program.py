@@ -9,6 +9,7 @@ from abren_one.modules.programs.domain.exceptions import ProgramError
 from abren_one.modules.programs.domain.value_objects import ProgramStatus
 from abren_one.modules.programs.models import Program
 from abren_one.platform.audit.service import record_audit_event
+from abren_one.platform.authorization import check_permission
 from abren_one.platform.common.context import ExecutionContext
 
 
@@ -34,6 +35,8 @@ def execute(data: CreateProgramInput) -> CreateProgramResult:
     Validates that the organization exists and is active using the Organizations
     module's public query `get_organization` via `public.py`.
     """
+    check_permission(data.context, "programs:manage")
+
     if data.context.organization_id is None:
         raise ProgramError("Organization context is required.")
 

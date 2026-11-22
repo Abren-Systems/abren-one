@@ -24,6 +24,7 @@ from abren_one.modules.fundraising.models import Donation, Donor, Grant
 from abren_one.modules.organizations.public import get_organization
 from abren_one.modules.programs.public import ProgramNotFoundError, get_program
 from abren_one.platform.audit.service import record_audit_event
+from abren_one.platform.authorization import check_permission
 from abren_one.platform.common.context import ExecutionContext
 
 
@@ -48,6 +49,8 @@ class RecordDonationResult:
 @transaction.atomic
 def execute(data: RecordDonationInput) -> RecordDonationResult:
     """Record a monetary donation received from a supporter (§6.2, §Appendix B)."""
+    check_permission(data.context, "donations:record")
+
     if data.context.organization_id is None:
         raise FundraisingError("Organization context is required.")
     org_id = data.context.organization_id

@@ -56,12 +56,14 @@ def execution_context_factory() -> Callable[..., ExecutionContext]:
         actor_id: uuid.UUID | None = None,
         organization_id: uuid.UUID | None = None,
         correlation_id: uuid.UUID | None = None,
+        actor_role: str | None = "admin",
     ) -> ExecutionContext:
         return ExecutionContext(
             actor_type=actor_type,
             actor_id=actor_id or uuid.uuid4(),
             organization_id=organization_id,
             correlation_id=correlation_id or uuid.uuid4(),
+            actor_role=actor_role,
         )
 
     return _make_context

@@ -14,8 +14,16 @@ from abren_one.modules.finance.domain.exceptions import (
 from abren_one.modules.finance.domain.policies import validate_journal_lines
 from abren_one.modules.finance.domain.value_objects import JournalEntryStatus
 from abren_one.modules.finance.models import Account, JournalEntry, JournalLine
+from abren_one.modules.fundraising.public import (
+    DonationNotFoundError,
+    GrantNotFoundError,
+    get_donation,
+    get_grant,
+)
 from abren_one.modules.organizations.public import get_organization
+from abren_one.modules.programs.public import ProgramNotFoundError, get_program
 from abren_one.platform.audit.service import record_audit_event
+from abren_one.platform.authorization import check_permission
 from abren_one.platform.common.context import ExecutionContext
 
 
@@ -52,11 +60,12 @@ class CreateJournalEntryResult:
 
 
 def _generate_entry_number(org_id: UUID, entry_date: date) -> str:
-    """Generate a sequential entry number for the year, e.g. JE-2026-0001."""
+    """Generate a sequential entry number for the year with concurrency locking, e.g. JE-2026-0001."""
     year = entry_date.year
     prefix = f"JE-{year}-"
     last_entry = (
-        JournalEntry.objects.filter(
+        JournalEntry.objects.select_for_update()
+        .filter(
             organization_id=org_id,
             entry_number__startswith=prefix,
         )
@@ -76,6 +85,10 @@ def _generate_entry_number(org_id: UUID, entry_date: date) -> str:
 @transaction.atomic
 def execute(data: CreateJournalEntryInput) -> CreateJournalEntryResult:
     """Create a journal entry (draft or posted immediately) with balanced lines."""
+    check_permission(data.context, "finance:journal_entries:create")
+    if data.post_immediately:
+        check_permission(data.context, "finance:journal_entries:post")
+
     if data.context.organization_id is None:
         raise FinanceDomainError("Organization context is required.")
 
@@ -83,11 +96,35 @@ def execute(data: CreateJournalEntryInput) -> CreateJournalEntryResult:
     if not org.is_active:
         raise FinanceDomainError("Cannot create journal entry for an inactive or suspended organization.")
 
+    # Validate soft cross-module references against active tenant (§4.4)
+    if data.program_id:
+        try:
+            get_program(organization_id=org.id, program_id=data.program_id)
+        except ProgramNotFoundError as exc:
+            raise FinanceDomainError(f"Program {data.program_id} not found in this organization.") from exc
+
+    if data.grant_id:
+        try:
+            get_grant(grant_id=data.grant_id, organization_id=org.id)
+        except GrantNotFoundError as exc:
+            raise FinanceDomainError(f"Grant {data.grant_id} not found in this organization.") from exc
+
+    if data.donation_id:
+        try:
+            get_donation(donation_id=data.donation_id, organization_id=org.id)
+        except DonationNotFoundError as exc:
+            raise FinanceDomainError(f"Donation {data.donation_id} not found in this organization.") from exc
+
     currency = data.currency.upper()
 
-    # Load and validate accounts
+    # Load and validate accounts with lock in canonical order to avoid deadlock
     account_ids = {line.account_id for line in data.lines}
-    accounts_by_id = {acc.id: acc for acc in Account.objects.filter(id__in=account_ids, organization_id=org.id)}
+    accounts_by_id = {
+        acc.id: acc
+        for acc in Account.objects.select_for_update()
+        .filter(id__in=sorted(account_ids), organization_id=org.id)
+        .order_by("id")
+    }
 
     if len(accounts_by_id) != len(account_ids):
         missing = account_ids - set(accounts_by_id.keys())

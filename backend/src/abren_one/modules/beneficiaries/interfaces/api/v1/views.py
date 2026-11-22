@@ -44,6 +44,7 @@ from abren_one.modules.beneficiaries.interfaces.api.v1.serializers import (
     ServiceDeliveryResponseSerializer,
     UpdateBeneficiaryRequestSerializer,
 )
+from abren_one.platform.authorization.permissions import require_permission
 from abren_one.platform.common.context import build_execution_context
 from abren_one.platform.tenancy.permissions import HasOrganizationContext
 
@@ -51,7 +52,18 @@ from abren_one.platform.tenancy.permissions import HasOrganizationContext
 class BeneficiaryListCreateView(APIView):
     """List and register beneficiaries within the active organization (§7.2)."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [
+                IsAuthenticated(),
+                HasOrganizationContext(),
+                require_permission("beneficiaries:manage")(),
+            ]
+        return [
+            IsAuthenticated(),
+            HasOrganizationContext(),
+            require_permission("beneficiaries:view")(),
+        ]
 
     def get(self, request: Request) -> Response:
         status_param = request.query_params.get("status")
@@ -91,7 +103,18 @@ class BeneficiaryListCreateView(APIView):
 class BeneficiaryDetailView(APIView):
     """Retrieve or update details for a specific beneficiary."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    def get_permissions(self):
+        if self.request.method == "PATCH":
+            return [
+                IsAuthenticated(),
+                HasOrganizationContext(),
+                require_permission("beneficiaries:manage")(),
+            ]
+        return [
+            IsAuthenticated(),
+            HasOrganizationContext(),
+            require_permission("beneficiaries:view")(),
+        ]
 
     def get(self, request: Request, beneficiary_id: uuid.UUID) -> Response:
         beneficiary = get_beneficiary(
@@ -126,7 +149,18 @@ class BeneficiaryDetailView(APIView):
 class ServiceDeliveryListCreateView(APIView):
     """List and record service deliveries within the active organization."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [
+                IsAuthenticated(),
+                HasOrganizationContext(),
+                require_permission("service_deliveries:record")(),
+            ]
+        return [
+            IsAuthenticated(),
+            HasOrganizationContext(),
+            require_permission("service_deliveries:view")(),
+        ]
 
     def get(self, request: Request) -> Response:
         beneficiary_id_raw = request.query_params.get("beneficiary_id")
@@ -167,7 +201,11 @@ class ServiceDeliveryListCreateView(APIView):
 class ServiceDeliveryDetailView(APIView):
     """Retrieve details for a specific service delivery."""
 
-    permission_classes = [IsAuthenticated, HasOrganizationContext]
+    permission_classes = [
+        IsAuthenticated,
+        HasOrganizationContext,
+        require_permission("service_deliveries:view"),
+    ]
 
     def get(self, request: Request, delivery_id: uuid.UUID) -> Response:
         delivery = get_service_delivery(

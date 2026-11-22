@@ -5,6 +5,13 @@ Cross-module ForeignKeys use string references ("organizations.Organization"),
 not direct model imports.
 """
 
+from abren_one.modules.organizations.application.commands.add_member import (
+    AddMemberInput,
+    AddMemberResult,
+)
+from abren_one.modules.organizations.application.commands.add_member import (
+    execute as add_member,
+)
 from abren_one.modules.organizations.application.commands.create_branch import (
     CreateBranchInput,
     CreateBranchResult,
@@ -78,6 +85,8 @@ from abren_one.modules.organizations.domain.exceptions import (
 )
 
 __all__ = [
+    "AddMemberInput",
+    "AddMemberResult",
     "BranchNotFoundError",
     "BranchSummaryResult",
     "CannotRevokeLastOwnerError",
@@ -97,6 +106,7 @@ __all__ = [
     "OrganizationError",
     "OrganizationNotFoundError",
     "UserOrganizationResult",
+    "add_member",
     "create_branch",
     "create_department",
     "create_organization",
