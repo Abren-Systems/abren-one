@@ -26,3 +26,17 @@ urlpatterns = [
     path("api/v1/fundraising/", include("abren_one.modules.fundraising.interfaces.api.v1.urls")),
     path("api/v1/beneficiaries/", include("abren_one.modules.beneficiaries.interfaces.api.v1.urls")),
 ]
+
+# Register Django Debug Toolbar if installed and in DEBUG mode
+from django.conf import settings  # noqa: E402
+
+if getattr(settings, "DEBUG", False):
+    try:
+        import debug_toolbar  # noqa: F401
+
+        urlpatterns = [
+            path("__debug__/", include("debug_toolbar.urls")),
+            *urlpatterns,
+        ]
+    except ImportError:
+        pass
