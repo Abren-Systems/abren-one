@@ -82,8 +82,8 @@ class GoodsReceiptItem(TimestampMixin, models.Model):
         ordering = ["id"]
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(quantity_received__gte=0),
-                name="grn_item_received_non_negative",
+                condition=models.Q(quantity_received__gt=0),
+                name="grn_item_received_positive",
             ),
             models.CheckConstraint(
                 condition=models.Q(quantity_accepted__gte=0),
@@ -92,6 +92,12 @@ class GoodsReceiptItem(TimestampMixin, models.Model):
             models.CheckConstraint(
                 condition=models.Q(quantity_rejected__gte=0),
                 name="grn_item_rejected_non_negative",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(
+                    quantity_accepted__lte=models.F("quantity_received") - models.F("quantity_rejected")
+                ),
+                name="grn_item_inspection_total_lte_received",
             ),
         ]
 

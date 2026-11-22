@@ -424,6 +424,207 @@ class TestProcurementQueries:
         assert pos_2.delivery_position == "FULLY_DELIVERED"
         assert pos_2.items[0].quantity_outstanding == Decimal("0.00")
 
+        # Over-delivery: receive 2 additional bonus tablets and accept them
+        grn3 = record_goods_receipt(
+            RecordGoodsReceiptInput(
+                context=ctx,
+                purchase_order_id=po.id,
+                received_date=date.today(),
+                items=[
+                    RecordReceiptItemInput(
+                        po_item_id=po_item.id,
+                        quantity_received=Decimal("2"),
+                    )
+                ],
+            )
+        )
+        grn3_obj = get_goods_receipt(ctx, grn3.receipt_id)
+        inspect_goods_receipt(
+            InspectGoodsReceiptInput(
+                context=ctx,
+                receipt_id=grn3.receipt_id,
+                inspections=[
+                    InspectReceiptItemInput(
+                        grn_item_id=grn3_obj.items[0].id,
+                        quantity_accepted=Decimal("2"),
+                        quantity_rejected=Decimal("0"),
+                    )
+                ],
+            )
+        )
+        pos_3 = get_order_delivery_position(ctx, po_res.order_id)
+        assert pos_3.delivery_position == "OVER_DELIVERED"
+        assert pos_3.items[0].quantity_accepted == Decimal("12.00")
+
+    def test_multi_vendor_partial_fulfillment_lifecycle(
+        self,
+        org_context: tuple[uuid.UUID, ExecutionContext],
+    ):
+        """IMP-2: 1 Requisition split across 2 Vendors/POs progressing through full fulfillment."""
+        org_id, ctx = org_context
+        vendor_a = create_vendor(CreateVendorInput(context=ctx, name="Vendor A (Books)"))
+        vendor_b = create_vendor(CreateVendorInput(context=ctx, name="Vendor B (Pens)"))
+
+        # PR with 500 Books and 300 Pens
+        req = create_purchase_requisition(
+            CreatePurchaseRequisitionInput(
+                context=ctx,
+                title="Consolidated School Order",
+                items=[
+                    CreateRequisitionItemInput(
+                        description="Exercise Books",
+                        quantity=Decimal("500"),
+                        unit="books",
+                        estimated_unit_price=Decimal("2.00"),
+                    ),
+                    CreateRequisitionItemInput(
+                        description="Ballpoint Pens",
+                        quantity=Decimal("300"),
+                        unit="pens",
+                        estimated_unit_price=Decimal("0.50"),
+                    ),
+                ],
+            )
+        )
+        submit_purchase_requisition(SubmitPurchaseRequisitionInput(context=ctx, requisition_id=req.requisition_id))
+        approver_ctx = ExecutionContext(
+            actor_type=ActorType.USER,
+            actor_id=uuid.uuid4(),
+            organization_id=org_id,
+            correlation_id=uuid.uuid4(),
+            actor_role="owner",
+        )
+        approve_purchase_requisition(
+            ApprovePurchaseRequisitionInput(
+                context=approver_ctx,
+                requisition_id=req.requisition_id,
+            )
+        )
+
+        req_detail = get_purchase_requisition(ctx, req.requisition_id)
+        book_item = next(i for i in req_detail.items if i.description == "Exercise Books")
+        pen_item = next(i for i in req_detail.items if i.description == "Ballpoint Pens")
+
+        # 1. State: NOT_ORDERED
+        f0 = get_requisition_fulfillment(ctx, req.requisition_id)
+        assert f0.fulfillment_position == "NOT_ORDERED"
+
+        # 2. PO 1 with Vendor A for Exercise Books only -> PARTIALLY_ORDERED
+        po1 = create_purchase_order(
+            CreatePurchaseOrderInput(
+                context=ctx,
+                vendor_id=vendor_a.vendor_id,
+                requisition_id=req.requisition_id,
+                items=[
+                    CreatePurchaseOrderItemInput(
+                        description="Exercise Books",
+                        quantity=Decimal("500"),
+                        unit="books",
+                        unit_price=Decimal("1.95"),
+                        allocations=[
+                            CreateAllocationInput(
+                                requisition_item_id=book_item.id,
+                                allocated_quantity=Decimal("500"),
+                            )
+                        ],
+                    )
+                ],
+            )
+        )
+        f1 = get_requisition_fulfillment(ctx, req.requisition_id)
+        assert f1.fulfillment_position == "PARTIALLY_ORDERED"
+
+        # 3. PO 2 with Vendor B for Pens -> FULLY_ORDERED
+        po2 = create_purchase_order(
+            CreatePurchaseOrderInput(
+                context=ctx,
+                vendor_id=vendor_b.vendor_id,
+                requisition_id=req.requisition_id,
+                items=[
+                    CreatePurchaseOrderItemInput(
+                        description="Ballpoint Pens",
+                        quantity=Decimal("300"),
+                        unit="pens",
+                        unit_price=Decimal("0.48"),
+                        allocations=[
+                            CreateAllocationInput(
+                                requisition_item_id=pen_item.id,
+                                allocated_quantity=Decimal("300"),
+                            )
+                        ],
+                    )
+                ],
+            )
+        )
+        f2 = get_requisition_fulfillment(ctx, req.requisition_id)
+        assert f2.fulfillment_position == "FULLY_ORDERED"
+
+        # 4. Deliver and inspect PO 1 (Books) -> PARTIALLY_FULFILLED
+        issue_purchase_order(IssuePurchaseOrderInput(context=ctx, order_id=po1.order_id))
+        po1_detail = get_purchase_order(ctx, po1.order_id)
+        grn1 = record_goods_receipt(
+            RecordGoodsReceiptInput(
+                context=ctx,
+                purchase_order_id=po1.order_id,
+                received_date=date.today(),
+                items=[
+                    RecordReceiptItemInput(
+                        po_item_id=po1_detail.items[0].id,
+                        quantity_received=Decimal("500"),
+                    )
+                ],
+            )
+        )
+        grn1_detail = get_goods_receipt(ctx, grn1.receipt_id)
+        inspect_goods_receipt(
+            InspectGoodsReceiptInput(
+                context=ctx,
+                receipt_id=grn1.receipt_id,
+                inspections=[
+                    InspectReceiptItemInput(
+                        grn_item_id=grn1_detail.items[0].id,
+                        quantity_accepted=Decimal("500"),
+                        quantity_rejected=Decimal("0"),
+                    )
+                ],
+            )
+        )
+        f3 = get_requisition_fulfillment(ctx, req.requisition_id)
+        assert f3.fulfillment_position == "PARTIALLY_FULFILLED"
+
+        # 5. Deliver and inspect PO 2 (Pens) -> FULLY_FULFILLED
+        issue_purchase_order(IssuePurchaseOrderInput(context=ctx, order_id=po2.order_id))
+        po2_detail = get_purchase_order(ctx, po2.order_id)
+        grn2 = record_goods_receipt(
+            RecordGoodsReceiptInput(
+                context=ctx,
+                purchase_order_id=po2.order_id,
+                received_date=date.today(),
+                items=[
+                    RecordReceiptItemInput(
+                        po_item_id=po2_detail.items[0].id,
+                        quantity_received=Decimal("300"),
+                    )
+                ],
+            )
+        )
+        grn2_detail = get_goods_receipt(ctx, grn2.receipt_id)
+        inspect_goods_receipt(
+            InspectGoodsReceiptInput(
+                context=ctx,
+                receipt_id=grn2.receipt_id,
+                inspections=[
+                    InspectReceiptItemInput(
+                        grn_item_id=grn2_detail.items[0].id,
+                        quantity_accepted=Decimal("300"),
+                        quantity_rejected=Decimal("0"),
+                    )
+                ],
+            )
+        )
+        f4 = get_requisition_fulfillment(ctx, req.requisition_id)
+        assert f4.fulfillment_position == "FULLY_FULFILLED"
+
 
 @pytest.mark.django_db
 class TestPublicInterface:

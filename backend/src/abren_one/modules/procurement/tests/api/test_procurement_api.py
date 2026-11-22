@@ -359,6 +359,13 @@ class TestProcurementAPI:
         )
         assert app_resp.status_code == status.HTTP_403_FORBIDDEN
 
+        # Member cannot return requisition (requires procurement:requisitions:create)
+        ret_resp = member_client.post(
+            f"/api/v1/procurement/requisitions/{req_id}/return/",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert ret_resp.status_code == status.HTTP_403_FORBIDDEN
+
     def test_cross_tenant_isolation(self) -> None:
         """Ensure entity in Org A is inaccessible from Org B context."""
         v_resp = self.client.post(

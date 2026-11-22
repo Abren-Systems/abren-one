@@ -120,6 +120,8 @@ def execute(data: RecordGoodsReceiptInput) -> RecordGoodsReceiptResult:
         corrects=corrects_grn,
     )
 
+    over_receipt_warnings: list[str] = []
+
     for item_input in data.items:
         try:
             po_item = PurchaseOrderItem.objects.select_for_update().get(id=item_input.po_item_id)
@@ -138,6 +140,10 @@ def execute(data: RecordGoodsReceiptInput) -> RecordGoodsReceiptResult:
             po_item.quantity,
             already_received,
         )
+
+        total_after = already_received + item_input.quantity_received
+        if total_after > po_item.quantity:
+            over_receipt_warnings.append(f"{po_item.description}: received {total_after} vs ordered {po_item.quantity}")
 
         GoodsReceiptItem.objects.create(
             goods_receipt=grn,
@@ -161,6 +167,7 @@ def execute(data: RecordGoodsReceiptInput) -> RecordGoodsReceiptResult:
             "receipt_number": grn.receipt_number,
             "purchase_order_id": str(order.id),
             "item_count": len(data.items),
+            "over_receipt_warnings": over_receipt_warnings if over_receipt_warnings else None,
         },
     )
 

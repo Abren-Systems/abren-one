@@ -579,6 +579,7 @@ class ReturnRequisitionView(APIView):
     permission_classes = [
         IsAuthenticated,
         HasOrganizationContext,
+        require_permission("procurement:requisitions:create"),
     ]
 
     def post(self, request: Request, requisition_id: uuid.UUID) -> Response:

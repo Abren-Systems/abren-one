@@ -543,6 +543,41 @@ class TestPurchaseOrderLifecycle:
         )
         assert cancel_res.status == PurchaseOrderStatus.CANCELLED.value
 
+    def test_po_preserves_custom_payment_terms_on_issue(self, org_context: tuple[uuid.UUID, ExecutionContext]):
+        """BUG-1 regression test: manually updated payment terms must not be overwritten by vendor default on issue."""
+        _, ctx = org_context
+        v_res = create_vendor(
+            CreateVendorInput(
+                context=ctx,
+                name="Specialty Chemicals",
+                default_payment_terms="Net 30",
+            )
+        )
+        po_res = create_purchase_order(
+            CreatePurchaseOrderInput(
+                context=ctx,
+                vendor_id=v_res.vendor_id,
+                items=[
+                    CreatePurchaseOrderItemInput(
+                        description="Lab Reagents",
+                        quantity=Decimal("2"),
+                        unit="bottles",
+                        unit_price=Decimal("120.00"),
+                    )
+                ],
+            )
+        )
+        # Update draft PO with negotiated custom terms
+        po = PurchaseOrder.objects.get(id=po_res.order_id)
+        po.payment_terms = "Net 90 Negotiated"
+        po.save()
+
+        # Issue the order
+        issue_res = issue_purchase_order(IssuePurchaseOrderInput(context=ctx, order_id=po.id))
+        assert issue_res.payment_terms == "Net 90 Negotiated"
+        po.refresh_from_db()
+        assert po.payment_terms == "Net 90 Negotiated"
+
     def test_close_purchase_order(self, org_context: tuple[uuid.UUID, ExecutionContext]):
         _, ctx = org_context
         v_res = create_vendor(CreateVendorInput(context=ctx, name="Printer Supplier"))
@@ -655,6 +690,57 @@ class TestGoodsReceiptAndInspection:
                     cancellation_reason="Attempt cancel",
                 )
             )
+
+    def test_over_receipt_records_audit_warning(self, org_context: tuple[uuid.UUID, ExecutionContext]):
+        """CONCERN-1: Over-receipt must record warning metadata in the audit event."""
+        org_id, ctx = org_context
+        v_res = create_vendor(CreateVendorInput(context=ctx, name="Generous Supplier"))
+        po_res = create_purchase_order(
+            CreatePurchaseOrderInput(
+                context=ctx,
+                vendor_id=v_res.vendor_id,
+                items=[
+                    CreatePurchaseOrderItemInput(
+                        description="Steel Bars",
+                        quantity=Decimal("10"),
+                        unit="pcs",
+                        unit_price=Decimal("50.00"),
+                    )
+                ],
+            )
+        )
+        issue_purchase_order(IssuePurchaseOrderInput(context=ctx, order_id=po_res.order_id))
+        order = PurchaseOrder.objects.get(id=po_res.order_id)
+        po_item = order.items.first()
+        assert po_item is not None
+
+        # Receive 12 instead of 10 (over-receipt)
+        grn_res = record_goods_receipt(
+            RecordGoodsReceiptInput(
+                context=ctx,
+                purchase_order_id=order.id,
+                received_date=date.today(),
+                items=[
+                    RecordReceiptItemInput(
+                        po_item_id=po_item.id,
+                        quantity_received=Decimal("12"),
+                    )
+                ],
+            )
+        )
+        assert grn_res.receipt_number.startswith("GRN-")
+
+        # Verify audit event contains over-receipt warning
+        audit = AuditEvent.objects.filter(
+            organization_id=org_id,
+            action="procurement.receipt.recorded",
+            target_id=grn_res.receipt_id,
+        ).first()
+        assert audit is not None
+        assert audit.metadata is not None
+        assert "over_receipt_warnings" in audit.metadata
+        assert audit.metadata["over_receipt_warnings"] is not None
+        assert any("received 12" in w and "ordered 10" in w for w in audit.metadata["over_receipt_warnings"])
 
     def test_cannot_record_grn_against_draft_po(self, org_context: tuple[uuid.UUID, ExecutionContext]):
         _, ctx = org_context

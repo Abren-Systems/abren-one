@@ -64,7 +64,7 @@ def execute(data: IssuePurchaseOrderInput) -> IssuePurchaseOrderResult:
     order.status = PurchaseOrderStatus.ISSUED.value
     order.issued_at = now
     order.issued_by = data.context.actor_id
-    order.payment_terms = order.vendor.default_payment_terms
+    # payment_terms already snapshotted at PO creation; do not overwrite
     order.save()
 
     record_audit_event(

@@ -56,7 +56,7 @@ def execute(
                 approved_by=req.approved_by,
                 approved_at=req.approved_at,
                 created_at=req.created_at,
-                item_count=req.items.count(),
+                item_count=len(req.items.all()),
             )
         )
     return results
