@@ -1,0 +1,349 @@
+import uuid
+from datetime import date
+from decimal import Decimal
+
+import pytest
+from django.db import IntegrityError
+
+from abren_one.modules.finance.domain.exceptions import (
+    FinanceDomainError,
+    ImmutableJournalEntryError,
+    UnbalancedJournalEntryError,
+)
+from abren_one.modules.finance.models import JournalLine
+from abren_one.modules.finance.public import (
+    AccountType,
+    CreateAccountInput,
+    CreateJournalEntryInput,
+    JournalEntryStatus,
+    JournalLineInput,
+    PostJournalEntryInput,
+    ReverseJournalEntryInput,
+    create_account,
+    create_journal_entry,
+    get_account,
+    get_journal_entry,
+    get_trial_balance,
+    post_journal_entry,
+    reverse_journal_entry,
+)
+from abren_one.modules.organizations.public import (
+    CreateOrganizationInput,
+    create_organization,
+)
+from abren_one.platform.audit.models import AuditEvent
+from abren_one.platform.common.context import ActorType, ExecutionContext
+
+
+@pytest.fixture
+def org_context() -> tuple[uuid.UUID, ExecutionContext]:
+    actor_id = uuid.uuid4()
+    corr_id = uuid.uuid4()
+    init_ctx = ExecutionContext(
+        actor_type=ActorType.SYSTEM,
+        actor_id=None,
+        organization_id=None,
+        correlation_id=corr_id,
+    )
+    org_res = create_organization(
+        CreateOrganizationInput(
+            context=init_ctx,
+            name="Emergency Relief NGO",
+            slug="emergency-relief-ngo",
+        )
+    )
+    ctx = ExecutionContext(
+        actor_type=ActorType.USER,
+        actor_id=actor_id,
+        organization_id=org_res.organization_id,
+        correlation_id=corr_id,
+    )
+    return org_res.organization_id, ctx
+
+
+@pytest.mark.django_db
+class TestAccountCommands:
+    def test_create_account_success(self, org_context: tuple[uuid.UUID, ExecutionContext]):
+        _, ctx = org_context
+        res = create_account(
+            CreateAccountInput(
+                context=ctx,
+                code="1010",
+                name="Operating Cash",
+                account_type=AccountType.ASSET.value,
+                currency="USD",
+            )
+        )
+        assert res.code == "1010"
+        assert res.account_type == "asset"
+
+        # Verify query
+        acc = get_account(res.account_id, ctx)
+        assert acc.code == "1010"
+        assert acc.name == "Operating Cash"
+
+        # Verify audit event
+        assert AuditEvent.objects.filter(action="finance.account.created", target_id=res.account_id).exists()
+
+    def test_reject_duplicate_account_code(self, org_context: tuple[uuid.UUID, ExecutionContext]):
+        _, ctx = org_context
+        create_account(
+            CreateAccountInput(
+                context=ctx,
+                code="1010",
+                name="Cash Account",
+                account_type=AccountType.ASSET.value,
+            )
+        )
+        with pytest.raises(FinanceDomainError, match="already exists"):
+            create_account(
+                CreateAccountInput(
+                    context=ctx,
+                    code="1010",
+                    name="Duplicate Cash",
+                    account_type=AccountType.ASSET.value,
+                )
+            )
+
+
+@pytest.mark.django_db
+class TestJournalEntryLifecycle:
+    def test_draft_post_and_trial_balance(self, org_context: tuple[uuid.UUID, ExecutionContext]):
+        _, ctx = org_context
+
+        # 1. Create accounts
+        cash = create_account(
+            CreateAccountInput(
+                context=ctx,
+                code="1010",
+                name="Operating Cash",
+                account_type=AccountType.ASSET.value,
+            )
+        )
+        donations = create_account(
+            CreateAccountInput(
+                context=ctx,
+                code="4010",
+                name="Donation Revenue",
+                account_type=AccountType.REVENUE.value,
+            )
+        )
+
+        # 2. Create balanced draft entry
+        je_res = create_journal_entry(
+            CreateJournalEntryInput(
+                context=ctx,
+                entry_date=date(2026, 11, 22),
+                memo="Initial donor grant funding",
+                currency="USD",
+                lines=[
+                    JournalLineInput(
+                        account_id=cash.account_id,
+                        debit=Decimal("25000.00"),
+                        credit=Decimal("0.00"),
+                    ),
+                    JournalLineInput(
+                        account_id=donations.account_id,
+                        debit=Decimal("0.00"),
+                        credit=Decimal("25000.00"),
+                    ),
+                ],
+                post_immediately=False,
+            )
+        )
+        assert je_res.status == JournalEntryStatus.DRAFT.value
+        assert je_res.total_debits == Decimal("25000.00")
+        assert je_res.total_credits == Decimal("25000.00")
+
+        # 3. Before posting, Trial Balance has no posted entries
+        tb_before = get_trial_balance(ctx)
+        assert tb_before.total_debits == Decimal("0.00")
+        assert tb_before.total_credits == Decimal("0.00")
+
+        # 4. Post journal entry
+        post_res = post_journal_entry(
+            PostJournalEntryInput(
+                context=ctx,
+                journal_entry_id=je_res.journal_entry_id,
+            )
+        )
+        assert post_res.status == JournalEntryStatus.POSTED.value
+
+        # Verify entry details
+        entry = get_journal_entry(je_res.journal_entry_id, ctx)
+        assert entry.status == JournalEntryStatus.POSTED.value
+        assert len(entry.lines) == 2
+
+        # 5. After posting, Trial Balance reflects the balances and is balanced
+        tb_after = get_trial_balance(ctx)
+        assert tb_after.is_balanced is True
+        assert tb_after.total_debits == Decimal("25000.00")
+        assert tb_after.total_credits == Decimal("25000.00")
+
+        # Verify audit trail
+        assert AuditEvent.objects.filter(
+            action="finance.journal_entry.posted",
+            target_id=je_res.journal_entry_id,
+        ).exists()
+
+    def test_reject_unbalanced_journal_entry(self, org_context: tuple[uuid.UUID, ExecutionContext]):
+        _, ctx = org_context
+        cash = create_account(
+            CreateAccountInput(
+                context=ctx,
+                code="1010",
+                name="Cash",
+                account_type=AccountType.ASSET.value,
+            )
+        )
+        donations = create_account(
+            CreateAccountInput(
+                context=ctx,
+                code="4010",
+                name="Donations",
+                account_type=AccountType.REVENUE.value,
+            )
+        )
+
+        with pytest.raises(UnbalancedJournalEntryError, match="unbalanced"):
+            create_journal_entry(
+                CreateJournalEntryInput(
+                    context=ctx,
+                    entry_date=date(2026, 11, 22),
+                    memo="Faulty unbalanced entry",
+                    lines=[
+                        JournalLineInput(
+                            account_id=cash.account_id,
+                            debit=Decimal("1000.00"),
+                            credit=Decimal("0.00"),
+                        ),
+                        JournalLineInput(
+                            account_id=donations.account_id,
+                            debit=Decimal("0.00"),
+                            credit=Decimal("500.00"),
+                        ),
+                    ],
+                )
+            )
+
+    def test_reverse_journal_entry(self, org_context: tuple[uuid.UUID, ExecutionContext]):
+        _, ctx = org_context
+        cash = create_account(
+            CreateAccountInput(
+                context=ctx,
+                code="1010",
+                name="Cash",
+                account_type=AccountType.ASSET.value,
+            )
+        )
+        expense = create_account(
+            CreateAccountInput(
+                context=ctx,
+                code="5010",
+                name="Supplies Expense",
+                account_type=AccountType.EXPENSE.value,
+            )
+        )
+
+        # Create & post entry
+        je_res = create_journal_entry(
+            CreateJournalEntryInput(
+                context=ctx,
+                entry_date=date(2026, 11, 22),
+                memo="Incorrect supplies purchase",
+                lines=[
+                    JournalLineInput(account_id=expense.account_id, debit=Decimal("1200.00")),
+                    JournalLineInput(account_id=cash.account_id, credit=Decimal("1200.00")),
+                ],
+                post_immediately=True,
+            )
+        )
+
+        # Reverse the posted entry
+        rev_res = reverse_journal_entry(
+            ReverseJournalEntryInput(
+                context=ctx,
+                journal_entry_id=je_res.journal_entry_id,
+                reason="Vendor refunded invoice",
+            )
+        )
+        assert rev_res.reversal_entry_number.startswith("REV-")
+
+        # Verify original entry is marked REVERSED
+        orig = get_journal_entry(je_res.journal_entry_id, ctx)
+        assert orig.status == JournalEntryStatus.REVERSED.value
+
+        # Verify reversal entry is POSTED with inverted debits and credits
+        rev = get_journal_entry(rev_res.reversal_entry_id, ctx)
+        assert rev.status == JournalEntryStatus.POSTED.value
+        assert rev.reversal_of_id == orig.id
+
+        # Trial balance should net out to zero
+        tb = get_trial_balance(ctx)
+        assert tb.is_balanced is True
+        assert tb.total_debits == Decimal("0.00")
+        assert tb.total_credits == Decimal("0.00")
+
+    def test_cannot_reverse_already_reversed_entry(self, org_context: tuple[uuid.UUID, ExecutionContext]):
+        _, ctx = org_context
+        cash = create_account(CreateAccountInput(context=ctx, code="1010", name="Cash"))
+        rev_acc = create_account(CreateAccountInput(context=ctx, code="4010", name="Donations", account_type="revenue"))
+
+        je_res = create_journal_entry(
+            CreateJournalEntryInput(
+                context=ctx,
+                entry_date=date(2026, 11, 22),
+                memo="Entry to reverse twice",
+                lines=[
+                    JournalLineInput(account_id=cash.account_id, debit=Decimal("100.00")),
+                    JournalLineInput(account_id=rev_acc.account_id, credit=Decimal("100.00")),
+                ],
+                post_immediately=True,
+            )
+        )
+
+        reverse_journal_entry(
+            ReverseJournalEntryInput(
+                context=ctx,
+                journal_entry_id=je_res.journal_entry_id,
+                reason="First reversal",
+            )
+        )
+
+        with pytest.raises(ImmutableJournalEntryError, match="Only posted journal entries can be reversed"):
+            reverse_journal_entry(
+                ReverseJournalEntryInput(
+                    context=ctx,
+                    journal_entry_id=je_res.journal_entry_id,
+                    reason="Second reversal attempt",
+                )
+            )
+
+
+@pytest.mark.django_db
+class TestDatabaseConstraints:
+    def test_check_constraint_rejects_line_with_both_debit_and_credit(
+        self,
+        org_context: tuple[uuid.UUID, ExecutionContext],
+    ):
+        org_id, ctx = org_context
+        acc = create_account(CreateAccountInput(context=ctx, code="1010", name="Cash"))
+        entry_res = create_journal_entry(
+            CreateJournalEntryInput(
+                context=ctx,
+                entry_date=date(2026, 11, 22),
+                memo="Valid entry",
+                lines=[
+                    JournalLineInput(account_id=acc.account_id, debit=Decimal("50.00")),
+                    JournalLineInput(account_id=acc.account_id, credit=Decimal("50.00")),
+                ],
+            )
+        )
+
+        with pytest.raises(IntegrityError):
+            JournalLine.objects.create(
+                journal_entry_id=entry_res.journal_entry_id,
+                account_id=acc.account_id,
+                debit=Decimal("10.00"),
+                credit=Decimal("10.00"),  # Violates finance_line_debit_xor_credit constraint
+            )

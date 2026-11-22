@@ -28,6 +28,17 @@ from abren_one.modules.beneficiaries.public import (
     record_service_delivery,
     register_beneficiary,
 )
+from abren_one.modules.finance.public import (
+    AccountType,
+    CreateAccountInput,
+    CreateJournalEntryInput,
+    JournalLineInput,
+    PostJournalEntryInput,
+    create_account,
+    create_journal_entry,
+    get_trial_balance,
+    post_journal_entry,
+)
 from abren_one.modules.fundraising.public import (
     CreateDonorInput,
     CreateGrantInput,
@@ -270,7 +281,88 @@ class TestNgoLifecycleWorkflow:
         assert deliveries[0].id == delivery_id
 
         # -------------------------------------------------------------------
-        # 5. Audit Trail Verification
+        # 5. Finance — Double-Entry General Ledger & Trial Balance (§6.2)
+        # -------------------------------------------------------------------
+        cash_acc = create_account(
+            CreateAccountInput(
+                context=tenant_ctx,
+                code="1010",
+                name="Operating Cash",
+                account_type=AccountType.ASSET.value,
+                currency="USD",
+            )
+        )
+        rev_acc = create_account(
+            CreateAccountInput(
+                context=tenant_ctx,
+                code="4010",
+                name="Grant Funding Revenue",
+                account_type=AccountType.REVENUE.value,
+                currency="USD",
+            )
+        )
+        exp_acc = create_account(
+            CreateAccountInput(
+                context=tenant_ctx,
+                code="5010",
+                name="Direct Relief Supplies Expense",
+                account_type=AccountType.EXPENSE.value,
+                currency="USD",
+            )
+        )
+
+        # Journal Entry 1: Record initial grant contribution receipt
+        donation_je = create_journal_entry(
+            CreateJournalEntryInput(
+                context=tenant_ctx,
+                entry_date=date(2026, 11, 2),
+                memo="Disbursement receipt for Emergency Nutrition grant",
+                currency="USD",
+                grant_id=grant_id,
+                donation_id=donation_id,
+                lines=[
+                    JournalLineInput(account_id=cash_acc.account_id, debit=Decimal("50000.00")),
+                    JournalLineInput(account_id=rev_acc.account_id, credit=Decimal("50000.00")),
+                ],
+                post_immediately=True,
+            )
+        )
+        assert donation_je.status == "posted"
+
+        # Journal Entry 2: Record relief aid expenditure
+        aid_je = create_journal_entry(
+            CreateJournalEntryInput(
+                context=tenant_ctx,
+                entry_date=date(2026, 11, 15),
+                memo="Relief supplies deployed for Mogadishu nutrition response",
+                currency="USD",
+                program_id=program_id,
+                lines=[
+                    JournalLineInput(account_id=exp_acc.account_id, debit=Decimal("12500.00")),
+                    JournalLineInput(account_id=cash_acc.account_id, credit=Decimal("12500.00")),
+                ],
+                post_immediately=False,
+            )
+        )
+        assert aid_je.status == "draft"
+
+        # Post the aid expenditure
+        post_res = post_journal_entry(
+            PostJournalEntryInput(
+                context=tenant_ctx,
+                journal_entry_id=aid_je.journal_entry_id,
+            )
+        )
+        assert post_res.status == "posted"
+
+        # Verify Trial Balance equilibrium
+        tb = get_trial_balance(tenant_ctx, currency="USD")
+        assert tb.is_balanced is True
+        assert tb.total_debits == Decimal("50000.00")
+        assert tb.total_credits == Decimal("50000.00")
+
+        # -------------------------------------------------------------------
+        # 6. Audit Trail Verification
         # -------------------------------------------------------------------
         audit_events = list(AuditEvent.objects.filter(organization_id=org_id).order_by("timestamp"))
         actions = [e.action for e in audit_events]
@@ -285,6 +377,9 @@ class TestNgoLifecycleWorkflow:
         assert "fundraising.donation.recorded" in actions
         assert "beneficiary.registered" in actions
         assert "service_delivery.recorded" in actions
+        assert "finance.account.created" in actions
+        assert "finance.journal_entry.created" in actions
+        assert "finance.journal_entry.posted" in actions
 
         for event in audit_events:
             assert event.outcome == "success"

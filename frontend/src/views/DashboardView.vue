@@ -120,6 +120,12 @@ onMounted(() => {
           <span class="tile-title">Structure & Members</span>
           <span class="tile-desc">Branches, departments, and multi-tenant access control</span>
         </router-link>
+
+        <router-link to="/finance" class="tile">
+          <span class="tile-icon">📑</span>
+          <span class="tile-title">Finance & General Ledger</span>
+          <span class="tile-desc">Chart of Accounts, balanced journal entries, and live trial balance</span>
+        </router-link>
       </div>
     </div>
   </div>
