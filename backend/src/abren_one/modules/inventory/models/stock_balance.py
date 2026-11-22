@@ -1,3 +1,4 @@
+import uuid
 from decimal import Decimal
 
 from django.db import models
@@ -9,9 +10,10 @@ from abren_one.modules.inventory.models.warehouse import Warehouse
 from abren_one.platform.common.models import OrgOwnedMixin, TimestampMixin
 
 
-class StockBalance(OrgOwnedMixin, TimestampMixin):
+class StockBalance(OrgOwnedMixin, TimestampMixin, models.Model):
     """Current operational quantity projection by warehouse, location, item, and batch."""
 
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     warehouse = models.ForeignKey(
         Warehouse,
         on_delete=models.PROTECT,

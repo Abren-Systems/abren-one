@@ -256,3 +256,227 @@ class TestInventoryAPI:
             HTTP_X_ORGANIZATION_ID=str(org_b.organization_id),
         )
         assert cross_resp.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_stock_intake_and_balances_api(self) -> None:
+        """API endpoints for opening stock receipt, donation receipt, and balances."""
+        # Setup item and warehouse
+        cat_resp = self.client.post(
+            "/api/v1/inventory/categories/",
+            {"name": "Nutrition", "code": "NUTR"},
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        item_resp = self.client.post(
+            "/api/v1/inventory/items/",
+            {
+                "category_id": cat_resp.data["category_id"],
+                "item_code": "RUTF-01",
+                "name": "PlumpyNut RUTF Sachets",
+                "unit_of_measure": "cartons",
+                "reorder_threshold": "50.00",
+            },
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        item_id = item_resp.data["item_id"]
+
+        wh_resp = self.client.post(
+            "/api/v1/inventory/warehouses/",
+            {"name": "Mekelle Depot", "code": "WH-MEK"},
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        wh_id = wh_resp.data["warehouse_id"]
+
+        # 1. Opening stock receipt
+        open_resp = self.client.post(
+            "/api/v1/inventory/transactions/receipt-opening/",
+            {
+                "warehouse_id": wh_id,
+                "transaction_date": "2026-11-20",
+                "reference_document": "INIT-001",
+                "lines": [
+                    {
+                        "item_id": item_id,
+                        "quantity": "200.00",
+                        "unit_cost": "45.00",
+                    }
+                ],
+            },
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert open_resp.status_code == status.HTTP_201_CREATED
+        assert str(open_resp.data["total_quantity"]) == "200.00"
+
+        # 2. Donation receipt
+        don_resp = self.client.post(
+            "/api/v1/inventory/transactions/receipt-donation/",
+            {
+                "warehouse_id": wh_id,
+                "donor_name": "UNICEF Ethiopia",
+                "transaction_date": "2026-11-21",
+                "reference_document": "DON-UNI-01",
+                "lines": [
+                    {
+                        "item_id": item_id,
+                        "quantity": "50.00",
+                        "unit_cost": "45.00",
+                    }
+                ],
+            },
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert don_resp.status_code == status.HTTP_201_CREATED
+        assert don_resp.data["donor_name"] == "UNICEF Ethiopia"
+
+        # 3. Check stock balances
+        bal_resp = self.client.get(
+            "/api/v1/inventory/balances/",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert bal_resp.status_code == status.HTTP_200_OK
+        assert len(bal_resp.data) == 1
+        assert bal_resp.data[0]["quantity_on_hand"] == "250.00"
+
+        # 4. Check reconciliation
+        rec_resp = self.client.get(
+            "/api/v1/inventory/balances/reconciliation/",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert rec_resp.status_code == status.HTTP_200_OK
+        assert rec_resp.data["is_healthy"] is True
+        assert rec_resp.data["discrepancies_count"] == 0
+
+    def test_stock_movements_api(self) -> None:
+        """API endpoints for transfer, issue, count adjust, write-off, ledger, and alerts."""
+        cat_resp = self.client.post(
+            "/api/v1/inventory/categories/",
+            {"name": "Water & Sanitation", "code": "WASH-02"},
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        item_resp = self.client.post(
+            "/api/v1/inventory/items/",
+            {
+                "category_id": cat_resp.data["category_id"],
+                "item_code": "PUR-TAB-100",
+                "name": "Water Purification Tablets",
+                "unit_of_measure": "strips",
+                "reorder_threshold": "80.00",
+            },
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        item_id = item_resp.data["item_id"]
+
+        wh1_resp = self.client.post(
+            "/api/v1/inventory/warehouses/",
+            {"name": "Depot 1", "code": "WH-DP1"},
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        wh1_id = wh1_resp.data["warehouse_id"]
+
+        wh2_resp = self.client.post(
+            "/api/v1/inventory/warehouses/",
+            {"name": "Depot 2", "code": "WH-DP2"},
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        wh2_id = wh2_resp.data["warehouse_id"]
+
+        # Intake 100 units at WH1
+        self.client.post(
+            "/api/v1/inventory/transactions/receipt-opening/",
+            {
+                "warehouse_id": wh1_id,
+                "transaction_date": "2026-11-20",
+                "lines": [{"item_id": item_id, "quantity": "100.00"}],
+            },
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+
+        # 1. Transfer 30 from WH1 to WH2
+        trf_resp = self.client.post(
+            "/api/v1/inventory/transactions/transfer/",
+            {
+                "source_warehouse_id": wh1_id,
+                "destination_warehouse_id": wh2_id,
+                "transaction_date": "2026-11-21",
+                "lines": [{"item_id": item_id, "quantity": "30.00"}],
+            },
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert trf_resp.status_code == status.HTTP_201_CREATED
+        trf_id = trf_resp.data["transaction_id"]
+
+        # 2. Issue 20 from WH1
+        iss_resp = self.client.post(
+            "/api/v1/inventory/transactions/issue/",
+            {
+                "warehouse_id": wh1_id,
+                "transaction_date": "2026-11-21",
+                "lines": [{"item_id": item_id, "quantity": "20.00"}],
+            },
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert iss_resp.status_code == status.HTTP_201_CREATED
+
+        # 3. Adjust count at WH1 (current is 50, physical is 55)
+        adj_resp = self.client.post(
+            "/api/v1/inventory/transactions/adjust/",
+            {
+                "warehouse_id": wh1_id,
+                "transaction_date": "2026-11-22",
+                "justification": "Physical count audit",
+                "lines": [{"item_id": item_id, "actual_quantity_counted": "55.00"}],
+            },
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert adj_resp.status_code == status.HTTP_201_CREATED
+        assert str(adj_resp.data["net_quantity_delta"]) == "5.00"
+
+        # 4. Write off 5 at WH1
+        wo_resp = self.client.post(
+            "/api/v1/inventory/transactions/write-off/",
+            {
+                "warehouse_id": wh1_id,
+                "transaction_date": "2026-11-22",
+                "approval_reference": "WO-AUTH-01",
+                "justification": "Packaging damaged during handling",
+                "lines": [{"item_id": item_id, "quantity": "5.00", "reason": "damaged"}],
+            },
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert wo_resp.status_code == status.HTTP_201_CREATED
+
+        # 5. Ledger list
+        ledger_resp = self.client.get(
+            "/api/v1/inventory/ledger/",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert ledger_resp.status_code == status.HTTP_200_OK
+        assert len(ledger_resp.data) >= 5
+
+        # 6. Transaction detail
+        detail_resp = self.client.get(
+            f"/api/v1/inventory/transactions/{trf_id}/",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert detail_resp.status_code == status.HTTP_200_OK
+        assert len(detail_resp.data["entries"]) == 2
+
+        # 7. Stock alerts (reorder threshold is 80, WH1 has 50 -> low stock alert)
+        alerts_resp = self.client.get(
+            "/api/v1/inventory/alerts/",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert alerts_resp.status_code == status.HTTP_200_OK
+        assert len(alerts_resp.data["reorder_alerts"]) >= 1

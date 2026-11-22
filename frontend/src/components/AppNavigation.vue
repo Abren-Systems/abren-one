@@ -11,6 +11,7 @@ const navItems = [
   { name: "Beneficiaries & Aid", path: "/beneficiaries", icon: "🤝" },
   { name: "Finance & Ledger", path: "/finance", icon: "📑" },
   { name: "Procurement & Purchasing", path: "/procurement", icon: "📦" },
+  { name: "Inventory & Warehouses", path: "/inventory", icon: "🏬" },
 ];
 </script>
 

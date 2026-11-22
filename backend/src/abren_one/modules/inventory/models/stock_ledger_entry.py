@@ -1,3 +1,4 @@
+import uuid
 from decimal import Decimal
 
 from django.db import models
@@ -13,9 +14,10 @@ from abren_one.modules.inventory.models.warehouse import Warehouse
 from abren_one.platform.common.models import OrgOwnedMixin, TimestampMixin
 
 
-class StockLedgerEntry(OrgOwnedMixin, TimestampMixin):
+class StockLedgerEntry(OrgOwnedMixin, TimestampMixin, models.Model):
     """Immutable record of an individual item quantity movement."""
 
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     transaction = models.ForeignKey(
         StockTransaction,
         on_delete=models.PROTECT,
@@ -75,7 +77,7 @@ class StockLedgerEntry(OrgOwnedMixin, TimestampMixin):
         return f"{self.item.name} ({self.quantity:+f}) @ {self.warehouse.code}"
 
     def save(self, *args, **kwargs) -> None:
-        if self.pk:
+        if not self._state.adding:
             raise ImmutableStockTransactionError("Posted stock ledger entries cannot be modified.")
         super().save(*args, **kwargs)
 

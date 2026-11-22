@@ -20,6 +20,7 @@ class WarehouseSummaryResult:
 
 def execute(
     context: ExecutionContext,
+    branch_id: UUID | None = None,
     warehouse_type: str | None = None,
     is_active: bool | None = None,
     limit: int = 100,
@@ -33,6 +34,8 @@ def execute(
         Warehouse.objects.filter(organization_id=context.organization_id).prefetch_related("locations").order_by("name")
     )
 
+    if branch_id:
+        qs = qs.filter(branch_id=branch_id)
     if warehouse_type:
         qs = qs.filter(warehouse_type=warehouse_type)
     if is_active is not None:

@@ -163,3 +163,220 @@ class WarehouseDetailResponseSerializer(serializers.Serializer):
 class CreateStorageLocationRequestSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=100)
     code = serializers.CharField(max_length=50)
+
+
+# ── Stock Movement Request Serializers ────────────────────────────────────────
+
+
+class ReceiveOpeningStockLineSerializer(serializers.Serializer):
+    item_id = serializers.UUIDField()
+    quantity = serializers.DecimalField(max_digits=12, decimal_places=2)
+    unit_cost = serializers.DecimalField(max_digits=15, decimal_places=2, default=0)
+    location_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+    batch_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+
+
+class ReceiveOpeningStockRequestSerializer(serializers.Serializer):
+    warehouse_id = serializers.UUIDField()
+    transaction_date = serializers.DateField()
+    reference_document = serializers.CharField(required=False, allow_blank=True, default="")
+    notes = serializers.CharField(required=False, allow_blank=True, default="")
+    lines = ReceiveOpeningStockLineSerializer(many=True)
+
+
+class ReceiveDonationLineSerializer(serializers.Serializer):
+    item_id = serializers.UUIDField()
+    quantity = serializers.DecimalField(max_digits=12, decimal_places=2)
+    unit_cost = serializers.DecimalField(max_digits=15, decimal_places=2, default=0)
+    location_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+    batch_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+
+
+class ReceiveDonationRequestSerializer(serializers.Serializer):
+    warehouse_id = serializers.UUIDField()
+    donor_name = serializers.CharField(max_length=255)
+    transaction_date = serializers.DateField()
+    reference_document = serializers.CharField(required=False, allow_blank=True, default="")
+    notes = serializers.CharField(required=False, allow_blank=True, default="")
+    lines = ReceiveDonationLineSerializer(many=True)
+
+
+class TransferLineSerializer(serializers.Serializer):
+    item_id = serializers.UUIDField()
+    quantity = serializers.DecimalField(max_digits=12, decimal_places=2)
+    source_location_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+    destination_location_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+    batch_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+
+
+class TransferStockRequestSerializer(serializers.Serializer):
+    source_warehouse_id = serializers.UUIDField()
+    destination_warehouse_id = serializers.UUIDField()
+    transaction_date = serializers.DateField()
+    reference_document = serializers.CharField(required=False, allow_blank=True, default="")
+    notes = serializers.CharField(required=False, allow_blank=True, default="")
+    lines = TransferLineSerializer(many=True)
+
+
+class IssueLineSerializer(serializers.Serializer):
+    item_id = serializers.UUIDField()
+    quantity = serializers.DecimalField(max_digits=12, decimal_places=2)
+    location_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+    batch_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+    program_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+    activity_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+
+
+class IssueStockRequestSerializer(serializers.Serializer):
+    warehouse_id = serializers.UUIDField()
+    transaction_date = serializers.DateField()
+    is_program_issue = serializers.BooleanField(default=False)
+    recipient_name = serializers.CharField(required=False, allow_blank=True, default="")
+    reference_document = serializers.CharField(required=False, allow_blank=True, default="")
+    notes = serializers.CharField(required=False, allow_blank=True, default="")
+    lines = IssueLineSerializer(many=True)
+
+
+class AdjustmentLineSerializer(serializers.Serializer):
+    item_id = serializers.UUIDField()
+    actual_quantity_counted = serializers.DecimalField(max_digits=12, decimal_places=2)
+    location_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+    batch_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+    reason = serializers.CharField(required=False, allow_blank=True, default="")
+
+
+class AdjustStockRequestSerializer(serializers.Serializer):
+    warehouse_id = serializers.UUIDField()
+    transaction_date = serializers.DateField()
+    justification = serializers.CharField()
+    reference_document = serializers.CharField(required=False, allow_blank=True, default="")
+    lines = AdjustmentLineSerializer(many=True)
+
+
+class WriteOffLineSerializer(serializers.Serializer):
+    item_id = serializers.UUIDField()
+    quantity = serializers.DecimalField(max_digits=12, decimal_places=2)
+    reason = serializers.CharField(max_length=100)
+    location_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+    batch_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+
+
+class WriteOffStockRequestSerializer(serializers.Serializer):
+    warehouse_id = serializers.UUIDField()
+    transaction_date = serializers.DateField()
+    approval_reference = serializers.CharField(max_length=100)
+    justification = serializers.CharField()
+    lines = WriteOffLineSerializer(many=True)
+
+
+# ── Stock Response Serializers ────────────────────────────────────────────────
+
+
+class StockBalanceResponseSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    item_id = serializers.UUIDField()
+    item_code = serializers.CharField()
+    item_name = serializers.CharField()
+    unit_of_measure = serializers.CharField()
+    warehouse_id = serializers.UUIDField()
+    warehouse_name = serializers.CharField()
+    warehouse_code = serializers.CharField()
+    location_id = serializers.UUIDField(allow_null=True)
+    location_name = serializers.CharField(allow_null=True)
+    location_code = serializers.CharField(allow_null=True)
+    batch_id = serializers.UUIDField(allow_null=True)
+    batch_number = serializers.CharField(allow_null=True)
+    expiry_date = serializers.DateField(allow_null=True)
+    quantity_on_hand = serializers.DecimalField(max_digits=12, decimal_places=2)
+    quantity_reserved = serializers.DecimalField(max_digits=12, decimal_places=2)
+    available_quantity = serializers.DecimalField(max_digits=12, decimal_places=2)
+    reorder_threshold = serializers.DecimalField(max_digits=12, decimal_places=2)
+    is_low_stock = serializers.BooleanField()
+
+
+class StockLedgerResponseSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    transaction_id = serializers.UUIDField()
+    transaction_number = serializers.CharField()
+    transaction_type = serializers.CharField()
+    transaction_date = serializers.DateField()
+    item_id = serializers.UUIDField()
+    item_code = serializers.CharField()
+    item_name = serializers.CharField()
+    unit_of_measure = serializers.CharField()
+    warehouse_id = serializers.UUIDField()
+    warehouse_name = serializers.CharField()
+    warehouse_code = serializers.CharField()
+    location_id = serializers.UUIDField(allow_null=True)
+    location_name = serializers.CharField(allow_null=True)
+    batch_id = serializers.UUIDField(allow_null=True)
+    batch_number = serializers.CharField(allow_null=True)
+    quantity = serializers.DecimalField(max_digits=12, decimal_places=2)
+    unit_cost = serializers.DecimalField(max_digits=15, decimal_places=2)
+    program_id = serializers.UUIDField(allow_null=True)
+    activity_id = serializers.UUIDField(allow_null=True)
+
+
+class TransactionEntryLineResponseSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    item_id = serializers.UUIDField()
+    item_code = serializers.CharField()
+    item_name = serializers.CharField()
+    unit_of_measure = serializers.CharField()
+    warehouse_id = serializers.UUIDField()
+    warehouse_name = serializers.CharField()
+    warehouse_code = serializers.CharField()
+    location_id = serializers.UUIDField(allow_null=True)
+    location_name = serializers.CharField(allow_null=True)
+    batch_id = serializers.UUIDField(allow_null=True)
+    batch_number = serializers.CharField(allow_null=True)
+    quantity = serializers.DecimalField(max_digits=12, decimal_places=2)
+    unit_cost = serializers.DecimalField(max_digits=15, decimal_places=2)
+    program_id = serializers.UUIDField(allow_null=True)
+    activity_id = serializers.UUIDField(allow_null=True)
+
+
+class TransactionDetailResponseSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    transaction_number = serializers.CharField()
+    transaction_type = serializers.CharField()
+    status = serializers.CharField()
+    transaction_date = serializers.DateField()
+    source_warehouse_id = serializers.UUIDField(allow_null=True)
+    source_warehouse_name = serializers.CharField(allow_null=True)
+    destination_warehouse_id = serializers.UUIDField(allow_null=True)
+    destination_warehouse_name = serializers.CharField(allow_null=True)
+    executed_by = serializers.UUIDField(allow_null=True)
+    reference_document = serializers.CharField()
+    donor_name = serializers.CharField()
+    notes = serializers.CharField()
+    entries = TransactionEntryLineResponseSerializer(many=True)
+
+
+class ReorderAlertResponseSerializer(serializers.Serializer):
+    item_id = serializers.UUIDField()
+    item_code = serializers.CharField()
+    item_name = serializers.CharField()
+    unit_of_measure = serializers.CharField()
+    warehouse_id = serializers.UUIDField()
+    warehouse_name = serializers.CharField()
+    warehouse_code = serializers.CharField()
+    quantity_on_hand = serializers.DecimalField(max_digits=12, decimal_places=2)
+    available_quantity = serializers.DecimalField(max_digits=12, decimal_places=2)
+    reorder_threshold = serializers.DecimalField(max_digits=12, decimal_places=2)
+    shortage_quantity = serializers.DecimalField(max_digits=12, decimal_places=2)
+
+
+class ExpiringBatchResponseSerializer(serializers.Serializer):
+    batch_id = serializers.UUIDField()
+    batch_number = serializers.CharField()
+    item_id = serializers.UUIDField()
+    item_code = serializers.CharField()
+    item_name = serializers.CharField()
+    warehouse_id = serializers.UUIDField()
+    warehouse_name = serializers.CharField()
+    warehouse_code = serializers.CharField()
+    expiry_date = serializers.DateField()
+    days_until_expiry = serializers.IntegerField()
+    quantity_on_hand = serializers.DecimalField(max_digits=12, decimal_places=2)
+    is_already_expired = serializers.BooleanField()

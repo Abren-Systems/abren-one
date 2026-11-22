@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 
 from abren_one.modules.inventory.domain.exceptions import (
@@ -11,11 +13,12 @@ from abren_one.modules.inventory.models.warehouse import Warehouse
 from abren_one.platform.common.models import OrgOwnedMixin, TimestampMixin
 
 
-class StockTransaction(OrgOwnedMixin, TimestampMixin):
+class StockTransaction(OrgOwnedMixin, TimestampMixin, models.Model):
     """Business document representing a stock movement event."""
 
     NUMBER_FIELD = "transaction_number"
 
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     transaction_number = models.CharField(max_length=50, db_index=True)
     transaction_type = models.CharField(
         max_length=30,
@@ -62,7 +65,7 @@ class StockTransaction(OrgOwnedMixin, TimestampMixin):
         return f"{self.transaction_number} ({self.transaction_type})"
 
     def save(self, *args, **kwargs) -> None:
-        if self.pk:
+        if not self._state.adding:
             orig = StockTransaction.objects.filter(pk=self.pk).values("status").first()
             if orig and orig["status"] == TransactionStatus.POSTED.value:
                 raise ImmutableStockTransactionError("Posted stock transactions cannot be modified.")
