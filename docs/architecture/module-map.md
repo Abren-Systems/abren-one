@@ -18,12 +18,12 @@
 | `programs` | Program, Project, Activity | Program structure and delivery |
 | `fundraising` | Donor, Grant, Donation | Funding streams, donors, and contributions |
 | `beneficiaries` | Beneficiary, ServiceDelivery | Beneficiary profiles and service delivery tracking |
+| `finance` | Chart of Accounts, General Ledger, Double-Entry Journal | Ledger accounts, journal entries, balanced financial postings |
+| `procurement` | Suppliers, Requisitions, Purchase Orders, Goods Receipt | Vendor directory, spend authorizations, commercial orders, delivery verification |
 
 ## Future Modules (Not Yet Implemented)
 
 | Module | Responsibility |
 |--------|---------------|
-| `finance` | Accounting, budgets, financial controls |
-| `procurement` | Purchasing lifecycle |
 | `inventory` | Stock, storage, distributions |
 | `governance` | Organizational controls and oversight |

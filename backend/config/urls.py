@@ -26,6 +26,7 @@ urlpatterns = [
     path("api/v1/fundraising/", include("abren_one.modules.fundraising.interfaces.api.v1.urls")),
     path("api/v1/beneficiaries/", include("abren_one.modules.beneficiaries.interfaces.api.v1.urls")),
     path("api/v1/finance/", include("abren_one.modules.finance.interfaces.api.v1.urls")),
+    path("api/v1/procurement/", include("abren_one.modules.procurement.interfaces.api.v1.urls")),
 ]
 
 # Register Django Debug Toolbar if installed and in DEBUG mode

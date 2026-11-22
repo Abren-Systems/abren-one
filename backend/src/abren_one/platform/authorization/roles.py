@@ -43,4 +43,15 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
     "finance:journal_entries:post": {Role.OWNER, Role.ADMIN},
     "finance:journal_entries:reverse": {Role.OWNER, Role.ADMIN},
     "finance:trial_balance:view": {Role.OWNER, Role.ADMIN, Role.STAFF, Role.MEMBER},
+    # Procurement permissions
+    "procurement:vendors:view": {Role.OWNER, Role.ADMIN, Role.STAFF, Role.MEMBER},
+    "procurement:vendors:manage": {Role.OWNER, Role.ADMIN, Role.STAFF},
+    "procurement:requisitions:view": {Role.OWNER, Role.ADMIN, Role.STAFF, Role.MEMBER},
+    "procurement:requisitions:create": {Role.OWNER, Role.ADMIN, Role.STAFF},
+    "procurement:requisitions:approve": {Role.OWNER, Role.ADMIN},
+    "procurement:orders:view": {Role.OWNER, Role.ADMIN, Role.STAFF, Role.MEMBER},
+    "procurement:orders:manage": {Role.OWNER, Role.ADMIN},
+    "procurement:receipts:view": {Role.OWNER, Role.ADMIN, Role.STAFF, Role.MEMBER},
+    "procurement:receipts:record": {Role.OWNER, Role.ADMIN, Role.STAFF},
+    "procurement:receipts:inspect": {Role.OWNER, Role.ADMIN, Role.STAFF},
 }

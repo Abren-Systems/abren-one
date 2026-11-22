@@ -10,6 +10,7 @@ const navItems = [
   { name: "Donors & Grants", path: "/fundraising", icon: "💰" },
   { name: "Beneficiaries & Aid", path: "/beneficiaries", icon: "🤝" },
   { name: "Finance & Ledger", path: "/finance", icon: "📑" },
+  { name: "Procurement & Purchasing", path: "/procurement", icon: "📦" },
 ];
 </script>
 
