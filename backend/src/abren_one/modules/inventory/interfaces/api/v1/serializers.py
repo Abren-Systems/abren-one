@@ -380,3 +380,58 @@ class ExpiringBatchResponseSerializer(serializers.Serializer):
     days_until_expiry = serializers.IntegerField()
     quantity_on_hand = serializers.DecimalField(max_digits=12, decimal_places=2)
     is_already_expired = serializers.BooleanField()
+
+
+class ReceivePurchasedStockLineSerializer(serializers.Serializer):
+    po_item_id = serializers.UUIDField()
+    item_id = serializers.UUIDField()
+    quantity = serializers.DecimalField(max_digits=12, decimal_places=2)
+    unit_cost = serializers.DecimalField(max_digits=15, decimal_places=2, required=False, allow_null=True)
+    location_id = serializers.UUIDField(required=False, allow_null=True)
+    batch_id = serializers.UUIDField(required=False, allow_null=True)
+    batch_number = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    expiry_date = serializers.DateField(required=False, allow_null=True)
+
+
+class ReceivePurchasedStockRequestSerializer(serializers.Serializer):
+    warehouse_id = serializers.UUIDField()
+    goods_receipt_id = serializers.UUIDField()
+    transaction_date = serializers.DateField()
+    reference_document = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    notes = serializers.CharField(required=False, allow_blank=True)
+    lines = ReceivePurchasedStockLineSerializer(many=True)
+
+
+class ReceivePurchasedStockResponseSerializer(serializers.Serializer):
+    transaction_id = serializers.UUIDField()
+    transaction_number = serializers.CharField()
+    goods_receipt_id = serializers.UUIDField()
+    goods_receipt_number = serializers.CharField()
+    purchase_order_id = serializers.UUIDField()
+    purchase_order_number = serializers.CharField()
+    total_lines = serializers.IntegerField()
+    total_quantity = serializers.DecimalField(max_digits=12, decimal_places=2)
+    destination_warehouse_id = serializers.UUIDField()
+
+
+class PendingGRNItemResponseSerializer(serializers.Serializer):
+    grn_item_id = serializers.UUIDField()
+    po_item_id = serializers.UUIDField()
+    description = serializers.CharField()
+    quantity_received = serializers.DecimalField(max_digits=12, decimal_places=2)
+    quantity_accepted = serializers.DecimalField(max_digits=12, decimal_places=2)
+    quantity_already_received = serializers.DecimalField(max_digits=12, decimal_places=2)
+    quantity_remaining = serializers.DecimalField(max_digits=12, decimal_places=2)
+    unit = serializers.CharField()
+    unit_price = serializers.DecimalField(max_digits=15, decimal_places=2)
+
+
+class PendingGRNResponseSerializer(serializers.Serializer):
+    grn_id = serializers.UUIDField()
+    receipt_number = serializers.CharField()
+    purchase_order_id = serializers.UUIDField()
+    purchase_order_number = serializers.CharField()
+    vendor_name = serializers.CharField()
+    received_date = serializers.DateField()
+    total_items = serializers.IntegerField()
+    items = PendingGRNItemResponseSerializer(many=True)

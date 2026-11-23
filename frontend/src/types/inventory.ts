@@ -193,3 +193,46 @@ export interface ReconciliationReport {
   is_healthy: boolean;
   discrepancies: BalanceDiscrepancy[];
 }
+
+export interface PendingGRNItem {
+  grn_item_id: string;
+  po_item_id: string;
+  description: string;
+  quantity_received: string;
+  quantity_accepted: string;
+  quantity_already_received: string;
+  quantity_remaining: string;
+  unit: string;
+  unit_price: string;
+}
+
+export interface PendingGRN {
+  grn_id: string;
+  receipt_number: string;
+  purchase_order_id: string;
+  purchase_order_number: string;
+  vendor_name: string;
+  received_date: string;
+  total_items: number;
+  items: PendingGRNItem[];
+}
+
+export interface ReceivePurchasedStockLinePayload {
+  po_item_id: string;
+  item_id: string;
+  quantity: string;
+  unit_cost?: string | null;
+  location_id?: string | null;
+  batch_id?: string | null;
+  batch_number?: string;
+  expiry_date?: string | null;
+}
+
+export interface ReceivePurchasedStockPayload {
+  warehouse_id: string;
+  goods_receipt_id: string;
+  transaction_date: string;
+  reference_document?: string;
+  notes?: string;
+  lines: ReceivePurchasedStockLinePayload[];
+}

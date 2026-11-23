@@ -60,6 +60,7 @@ class StockLedgerEntry(OrgOwnedMixin, TimestampMixin, models.Model):
     )
     program_id = models.UUIDField(null=True, blank=True, db_index=True)
     activity_id = models.UUIDField(null=True, blank=True, db_index=True)
+    po_item_id = models.UUIDField(null=True, blank=True, db_index=True)
 
     class Meta:
         db_table = "inventory_stock_ledger_entry"

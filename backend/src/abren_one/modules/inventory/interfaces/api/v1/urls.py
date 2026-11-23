@@ -7,8 +7,10 @@ from abren_one.modules.inventory.interfaces.api.v1.views import (
     ItemCategoryListCreateView,
     ItemDetailView,
     ItemListCreateView,
+    PendingGRNsListView,
     ReceiveDonationView,
     ReceiveOpeningStockView,
+    ReceivePurchasedStockView,
     ReconciliationView,
     StockAlertsView,
     StockBalanceListView,
@@ -49,8 +51,11 @@ urlpatterns = [
     path("transactions/<uuid:pk>/", StockTransactionDetailView.as_view(), name="transaction-detail"),
     path("transactions/receipt-opening/", ReceiveOpeningStockView.as_view(), name="receipt-opening"),
     path("transactions/receipt-donation/", ReceiveDonationView.as_view(), name="receipt-donation"),
+    path("transactions/receive-purchase/", ReceivePurchasedStockView.as_view(), name="receipt-purchase"),
     path("transactions/transfer/", TransferStockView.as_view(), name="transfer-stock"),
     path("transactions/issue/", IssueStockView.as_view(), name="issue-stock"),
     path("transactions/adjust/", AdjustStockView.as_view(), name="adjust-stock"),
     path("transactions/write-off/", WriteOffStockView.as_view(), name="write-off-stock"),
+    # Pending Procurement GRNs for Stock Intake
+    path("pending-grns/", PendingGRNsListView.as_view(), name="pending-grns-list"),
 ]

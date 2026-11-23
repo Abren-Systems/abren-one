@@ -10,6 +10,44 @@ from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
 
+from abren_one.modules.procurement.application.commands.create_purchase_order import (
+    CreatePurchaseOrderInput,
+    CreatePurchaseOrderItemInput,
+    CreatePurchaseOrderResult,
+)
+from abren_one.modules.procurement.application.commands.create_purchase_order import (
+    execute as create_purchase_order,
+)
+from abren_one.modules.procurement.application.commands.create_vendor import (
+    CreateVendorInput,
+    CreateVendorResult,
+)
+from abren_one.modules.procurement.application.commands.create_vendor import (
+    execute as create_vendor,
+)
+from abren_one.modules.procurement.application.commands.inspect_goods_receipt import (
+    InspectGoodsReceiptInput,
+    InspectGoodsReceiptResult,
+    InspectReceiptItemInput,
+)
+from abren_one.modules.procurement.application.commands.inspect_goods_receipt import (
+    execute as inspect_goods_receipt,
+)
+from abren_one.modules.procurement.application.commands.issue_purchase_order import (
+    IssuePurchaseOrderInput,
+    IssuePurchaseOrderResult,
+)
+from abren_one.modules.procurement.application.commands.issue_purchase_order import (
+    execute as issue_purchase_order,
+)
+from abren_one.modules.procurement.application.commands.record_goods_receipt import (
+    RecordGoodsReceiptInput,
+    RecordGoodsReceiptResult,
+    RecordReceiptItemInput,
+)
+from abren_one.modules.procurement.application.commands.record_goods_receipt import (
+    execute as record_goods_receipt,
+)
 from abren_one.modules.procurement.domain.exceptions import (
     GoodsReceiptNotFoundError,
     ProcurementError,
@@ -26,6 +64,7 @@ from abren_one.modules.procurement.domain.value_objects import (
 )
 from abren_one.modules.procurement.models import (
     GoodsReceiptItem,
+    GoodsReceiptNote,
     PurchaseOrder,
 )
 
@@ -71,6 +110,36 @@ class AcceptedReceiptItem:
     accepted_value: Decimal
     received_date: date
     program_id: UUID | None
+
+
+@dataclass(frozen=True)
+class GoodsReceiptLineDetail:
+    grn_item_id: UUID
+    po_item_id: UUID
+    description: str
+    quantity_received: Decimal
+    quantity_accepted: Decimal
+    quantity_rejected: Decimal
+    unit: str
+    unit_price: Decimal
+    is_inspected: bool
+
+
+@dataclass(frozen=True)
+class GoodsReceiptDetail:
+    grn_id: UUID
+    receipt_number: str
+    purchase_order_id: UUID
+    purchase_order_number: str
+    vendor_id: UUID
+    vendor_name: str
+    receipt_type: str
+    received_date: date
+    received_by: UUID
+    inspection_notes: str
+    is_fully_inspected: bool
+    has_rejections: bool
+    items: list[GoodsReceiptLineDetail]
 
 
 def _build_commitment_summary(order: PurchaseOrder) -> ProcurementCommitmentSummary:
@@ -264,22 +333,154 @@ def get_unmatched_accepted_receipts(
     return results
 
 
+def get_grn_details(
+    organization_id: UUID,
+    grn_id: UUID,
+) -> GoodsReceiptDetail:
+    """Retrieve detailed information about a goods receipt note for cross-module intake."""
+    try:
+        grn = (
+            GoodsReceiptNote.objects.filter(
+                id=grn_id,
+                organization_id=organization_id,
+            )
+            .select_related("purchase_order", "purchase_order__vendor")
+            .prefetch_related("items__po_item")
+            .get()
+        )
+    except GoodsReceiptNote.DoesNotExist as exc:
+        raise GoodsReceiptNotFoundError("Goods receipt note not found in this organization.") from exc
+
+    line_details = [
+        GoodsReceiptLineDetail(
+            grn_item_id=item.id,
+            po_item_id=item.po_item_id,
+            description=item.po_item.description,
+            quantity_received=Decimal(str(item.quantity_received)),
+            quantity_accepted=Decimal(str(item.quantity_accepted)),
+            quantity_rejected=Decimal(str(item.quantity_rejected)),
+            unit=item.po_item.unit,
+            unit_price=Decimal(str(item.po_item.unit_price)),
+            is_inspected=item.is_inspected,
+        )
+        for item in grn.items.all()
+    ]
+
+    return GoodsReceiptDetail(
+        grn_id=grn.id,
+        receipt_number=grn.receipt_number,
+        purchase_order_id=grn.purchase_order_id,
+        purchase_order_number=grn.purchase_order.order_number,
+        vendor_id=grn.purchase_order.vendor_id,
+        vendor_name=grn.purchase_order.vendor.name if grn.purchase_order.vendor else "",
+        receipt_type=grn.receipt_type,
+        received_date=grn.received_date,
+        received_by=grn.received_by,
+        inspection_notes=grn.inspection_notes,
+        is_fully_inspected=grn.is_fully_inspected,
+        has_rejections=grn.has_rejections,
+        items=line_details,
+    )
+
+
+def list_inspected_goods_receipts(
+    organization_id: UUID,
+    *,
+    receipt_type: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> list[GoodsReceiptDetail]:
+    """List inspected goods receipts that have at least one accepted item line."""
+    qs = (
+        GoodsReceiptNote.objects.filter(
+            organization_id=organization_id,
+            items__quantity_accepted__gt=0,
+            items__is_inspected=True,
+        )
+        .select_related("purchase_order", "purchase_order__vendor")
+        .prefetch_related("items__po_item")
+        .distinct()
+        .order_by("-received_date")
+    )
+
+    if receipt_type is not None:
+        qs = qs.filter(receipt_type=receipt_type)
+
+    results: list[GoodsReceiptDetail] = []
+    for grn in qs[offset : offset + limit]:
+        line_details = [
+            GoodsReceiptLineDetail(
+                grn_item_id=item.id,
+                po_item_id=item.po_item_id,
+                description=item.po_item.description,
+                quantity_received=Decimal(str(item.quantity_received)),
+                quantity_accepted=Decimal(str(item.quantity_accepted)),
+                quantity_rejected=Decimal(str(item.quantity_rejected)),
+                unit=item.po_item.unit,
+                unit_price=Decimal(str(item.po_item.unit_price)),
+                is_inspected=item.is_inspected,
+            )
+            for item in grn.items.all()
+        ]
+
+        results.append(
+            GoodsReceiptDetail(
+                grn_id=grn.id,
+                receipt_number=grn.receipt_number,
+                purchase_order_id=grn.purchase_order_id,
+                purchase_order_number=grn.purchase_order.order_number,
+                vendor_id=grn.purchase_order.vendor_id,
+                vendor_name=grn.purchase_order.vendor.name if grn.purchase_order.vendor else "",
+                receipt_type=grn.receipt_type,
+                received_date=grn.received_date,
+                received_by=grn.received_by,
+                inspection_notes=grn.inspection_notes,
+                is_fully_inspected=grn.is_fully_inspected,
+                has_rejections=grn.has_rejections,
+                items=line_details,
+            )
+        )
+    return results
+
+
 __all__ = [
     "AcceptedReceiptItem",
     "AuthorizationStatus",
+    "CreatePurchaseOrderInput",
+    "CreatePurchaseOrderItemInput",
+    "CreatePurchaseOrderResult",
+    "CreateVendorInput",
+    "CreateVendorResult",
+    "GoodsReceiptDetail",
+    "GoodsReceiptLineDetail",
     "GoodsReceiptNotFoundError",
+    "InspectGoodsReceiptInput",
+    "InspectGoodsReceiptResult",
+    "InspectReceiptItemInput",
+    "IssuePurchaseOrderInput",
+    "IssuePurchaseOrderResult",
     "ProcurementCommitmentItem",
     "ProcurementCommitmentSummary",
     "ProcurementError",
     "PurchaseOrderNotFoundError",
     "PurchaseOrderStatus",
     "ReceiptType",
+    "RecordGoodsReceiptInput",
+    "RecordGoodsReceiptResult",
+    "RecordReceiptItemInput",
     "RequisitionNotFoundError",
     "VendorNotFoundError",
     "VendorType",
     "VendorVerificationStatus",
+    "create_purchase_order",
+    "create_vendor",
     "get_accepted_receipts_for_order",
     "get_commitment_detail",
+    "get_grn_details",
     "get_outstanding_commitments",
     "get_unmatched_accepted_receipts",
+    "inspect_goods_receipt",
+    "issue_purchase_order",
+    "list_inspected_goods_receipts",
+    "record_goods_receipt",
 ]

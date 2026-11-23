@@ -47,6 +47,8 @@ class StockTransaction(OrgOwnedMixin, TimestampMixin, models.Model):
     executed_by = models.UUIDField(null=True, blank=True)
     reference_document = models.CharField(max_length=100, blank=True, default="")
     donor_name = models.CharField(max_length=255, blank=True, default="")
+    purchase_order_id = models.UUIDField(null=True, blank=True, db_index=True)
+    goods_receipt_id = models.UUIDField(null=True, blank=True, db_index=True)
     notes = models.TextField(blank=True, default="")
 
     class Meta:

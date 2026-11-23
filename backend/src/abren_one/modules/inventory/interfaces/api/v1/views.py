@@ -66,6 +66,13 @@ from abren_one.modules.inventory.application.commands.receive_opening_stock impo
 from abren_one.modules.inventory.application.commands.receive_opening_stock import (
     execute as receive_opening_stock,
 )
+from abren_one.modules.inventory.application.commands.receive_purchased_stock import (
+    ReceivePurchasedStockInput,
+    ReceivePurchasedStockLineInput,
+)
+from abren_one.modules.inventory.application.commands.receive_purchased_stock import (
+    execute as receive_purchased_stock,
+)
 from abren_one.modules.inventory.application.commands.transfer_stock import (
     TransferLineInput,
     TransferStockInput,
@@ -119,6 +126,9 @@ from abren_one.modules.inventory.application.queries.list_item_categories import
 from abren_one.modules.inventory.application.queries.list_items import (
     execute as list_items,
 )
+from abren_one.modules.inventory.application.queries.list_pending_grns import (
+    execute as list_pending_grns,
+)
 from abren_one.modules.inventory.application.queries.list_warehouses import (
     execute as list_warehouses,
 )
@@ -137,8 +147,11 @@ from abren_one.modules.inventory.interfaces.api.v1.serializers import (
     ItemCategoryResponseSerializer,
     ItemDetailResponseSerializer,
     ItemSummaryResponseSerializer,
+    PendingGRNResponseSerializer,
     ReceiveDonationRequestSerializer,
     ReceiveOpeningStockRequestSerializer,
+    ReceivePurchasedStockRequestSerializer,
+    ReceivePurchasedStockResponseSerializer,
     ReorderAlertResponseSerializer,
     StockBalanceResponseSerializer,
     StockLedgerResponseSerializer,
@@ -1025,5 +1038,85 @@ class ReconciliationView(APIView):
                     for d in report.discrepancies
                 ],
             },
+            status=status.HTTP_200_OK,
+        )
+
+
+class ReceivePurchasedStockView(APIView):
+    """Receive inspected and accepted items from a procurement goods receipt into a warehouse."""
+
+    permission_classes = [
+        IsAuthenticated,
+        HasOrganizationContext,
+        require_permission("inventory:stock:receive"),
+    ]
+
+    def post(self, request: Request) -> Response:
+        serializer = ReceivePurchasedStockRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        ctx = build_execution_context(request)
+        vdata = serializer.validated_data
+
+        lines = [
+            ReceivePurchasedStockLineInput(
+                po_item_id=line["po_item_id"],
+                item_id=line["item_id"],
+                quantity=line["quantity"],
+                unit_cost=line.get("unit_cost"),
+                location_id=line.get("location_id"),
+                batch_id=line.get("batch_id"),
+                batch_number=line.get("batch_number", ""),
+                expiry_date=line.get("expiry_date"),
+            )
+            for line in vdata["lines"]
+        ]
+
+        input_data = ReceivePurchasedStockInput(
+            context=ctx,
+            warehouse_id=vdata["warehouse_id"],
+            goods_receipt_id=vdata["goods_receipt_id"],
+            transaction_date=vdata["transaction_date"],
+            lines=lines,
+            reference_document=vdata.get("reference_document", ""),
+            notes=vdata.get("notes", ""),
+        )
+
+        try:
+            result = receive_purchased_stock(input_data)
+        except Exception as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            ReceivePurchasedStockResponseSerializer(result).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class PendingGRNsListView(APIView):
+    """List procurement goods receipts that have accepted items available for inventory intake."""
+
+    permission_classes = [
+        IsAuthenticated,
+        HasOrganizationContext,
+        require_permission("inventory:stock:view"),
+    ]
+
+    def get(self, request: Request) -> Response:
+        ctx = build_execution_context(request)
+        try:
+            limit = int(request.query_params.get("limit", 100))
+        except ValueError, TypeError:
+            limit = 100
+
+        try:
+            offset = int(request.query_params.get("offset", 0))
+        except ValueError, TypeError:
+            offset = 0
+
+        pending = list_pending_grns(ctx, limit=limit, offset=offset)
+        return Response(
+            PendingGRNResponseSerializer(pending, many=True).data,
             status=status.HTTP_200_OK,
         )

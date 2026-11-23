@@ -25,6 +25,7 @@ class TransactionType(StrEnum):
 
     RECEIPT_OPENING = "receipt_opening"
     RECEIPT_DONATION = "receipt_donation"
+    RECEIPT_PURCHASE = "receipt_purchase"
     TRANSFER = "transfer"
     ISSUE_GENERAL = "issue_general"
     ISSUE_PROGRAM = "issue_program"

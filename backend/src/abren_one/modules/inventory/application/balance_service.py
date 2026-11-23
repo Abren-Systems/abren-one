@@ -28,6 +28,7 @@ class LedgerPostingLine(NamedTuple):
     unit_cost: Decimal = Decimal("0.00")
     program_id: UUID | None = None
     activity_id: UUID | None = None
+    po_item_id: UUID | None = None
 
 
 def post_ledger_entries(
@@ -103,6 +104,7 @@ def post_ledger_entries(
                 unit_cost=line.unit_cost,
                 program_id=line.program_id,
                 activity_id=line.activity_id,
+                po_item_id=line.po_item_id,
             )
             created_entries.append(entry)
 

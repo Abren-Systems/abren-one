@@ -7,6 +7,7 @@ import type {
   ItemCategory,
   ItemDetail,
   ItemSummary,
+  PendingGRN,
   ReconciliationReport,
   ReorderAlert,
   StockBalance,
@@ -48,9 +49,39 @@ const showOpeningStockModal = ref(false);
 const showDonationModal = ref(false);
 const showTransferModal = ref(false);
 const showIssueModal = ref(false);
+const showReceivePurchaseModal = ref(false);
 const showAdjustModal = ref(false);
 const showWriteOffModal = ref(false);
 const showTransactionDetailModal = ref(false);
+
+const pendingGrns = ref<PendingGRN[]>([]);
+const selectedGrn = ref<PendingGRN | null>(null);
+const receivePurchaseForm = ref<{
+  warehouse_id: string;
+  goods_receipt_id: string;
+  transaction_date: string;
+  reference_document: string;
+  notes: string;
+  lines: Array<{
+    po_item_id: string;
+    description: string;
+    quantity_accepted: string;
+    quantity_remaining: string;
+    item_id: string;
+    quantity: string;
+    unit_cost: string;
+    location_id: string;
+    batch_number: string;
+    expiry_date: string;
+  }>;
+}>({
+  warehouse_id: "",
+  goods_receipt_id: "",
+  transaction_date: new Date().toISOString().split("T")[0],
+  reference_document: "",
+  notes: "",
+  lines: [],
+});
 
 // ── Filter State ──
 const itemSearch = ref("");
@@ -545,6 +576,102 @@ async function submitWriteOff() {
   }
 }
 
+async function openReceivePurchaseModal() {
+  isLoading.value = true;
+  errorMessage.value = null;
+  try {
+    const data = await api.get<PendingGRN[]>("/api/v1/inventory/pending-grns/");
+    pendingGrns.value = data;
+    selectedGrn.value = null;
+    receivePurchaseForm.value = {
+      warehouse_id: warehouses.value[0]?.id || "",
+      goods_receipt_id: "",
+      transaction_date: new Date().toISOString().split("T")[0],
+      reference_document: "",
+      notes: "",
+      lines: [],
+    };
+    showReceivePurchaseModal.value = true;
+  } catch (err: any) {
+    errorMessage.value = err.message || "Failed to load pending goods receipts.";
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+function onSelectPendingGrn(grnId: string) {
+  const grn = pendingGrns.value.find((g) => g.grn_id === grnId);
+  if (!grn) {
+    selectedGrn.value = null;
+    receivePurchaseForm.value.lines = [];
+    return;
+  }
+  selectedGrn.value = grn;
+  receivePurchaseForm.value.goods_receipt_id = grn.grn_id;
+  receivePurchaseForm.value.reference_document = grn.receipt_number;
+  receivePurchaseForm.value.lines = grn.items.map((item) => {
+    const matchedItem = items.value.find(
+      (i) => i.name.toLowerCase() === item.description.toLowerCase()
+    );
+    return {
+      po_item_id: item.po_item_id,
+      description: item.description,
+      quantity_accepted: item.quantity_accepted,
+      quantity_remaining: item.quantity_remaining,
+      item_id: matchedItem ? matchedItem.id : "",
+      quantity: item.quantity_remaining,
+      unit_cost: item.unit_price,
+      location_id: "",
+      batch_number: "",
+      expiry_date: "",
+    };
+  });
+}
+
+async function submitReceivePurchase() {
+  if (!receivePurchaseForm.value.warehouse_id) {
+    errorMessage.value = "Please select a destination warehouse.";
+    return;
+  }
+  if (!receivePurchaseForm.value.goods_receipt_id) {
+    errorMessage.value = "Please select a goods receipt note.";
+    return;
+  }
+  const linesToSubmit = receivePurchaseForm.value.lines.filter(
+    (l) => l.item_id && Number(l.quantity) > 0
+  );
+  if (linesToSubmit.length === 0) {
+    errorMessage.value = "At least one item must be mapped to a catalog item with quantity > 0.";
+    return;
+  }
+  isLoading.value = true;
+  try {
+    await api.post("/api/v1/inventory/transactions/receive-purchase/", {
+      warehouse_id: receivePurchaseForm.value.warehouse_id,
+      goods_receipt_id: receivePurchaseForm.value.goods_receipt_id,
+      transaction_date: receivePurchaseForm.value.transaction_date,
+      reference_document: receivePurchaseForm.value.reference_document,
+      notes: receivePurchaseForm.value.notes,
+      lines: linesToSubmit.map((l) => ({
+        po_item_id: l.po_item_id,
+        item_id: l.item_id,
+        quantity: l.quantity,
+        unit_cost: l.unit_cost || null,
+        location_id: l.location_id || null,
+        batch_number: l.batch_number.trim(),
+        expiry_date: l.expiry_date || null,
+      })),
+    });
+    showReceivePurchaseModal.value = false;
+    successMessage.value = "Purchased stock successfully received into warehouse.";
+    await loadData();
+  } catch (err: any) {
+    errorMessage.value = err.message || "Failed to receive purchased stock.";
+  } finally {
+    isLoading.value = false;
+  }
+}
+
 onMounted(() => {
   loadData();
 });
@@ -570,6 +697,9 @@ watch(
       <div class="header-actions">
         <button class="btn btn-secondary" :disabled="isLoading" @click="runReconciliation">
           <span>⚖️</span> Reconcile Ledger
+        </button>
+        <button class="btn btn-secondary" @click="openReceivePurchaseModal">
+          <span>📦</span> Receive Purchase (GRN)
         </button>
         <button class="btn btn-primary" @click="showOpeningStockModal = true">
           <span>📥</span> Opening Stock
@@ -722,6 +852,9 @@ watch(
           </select>
         </div>
         <div class="action-button-group">
+          <button class="btn btn-primary btn-sm" @click="openReceivePurchaseModal">
+            <span>📦</span> Receive Purchase (GRN)
+          </button>
           <button class="btn btn-secondary btn-sm" @click="showDonationModal = true">
             <span>🎁</span> In-Kind Donation
           </button>
@@ -1427,6 +1560,165 @@ watch(
           <div class="modal-actions">
             <button type="button" class="btn btn-ghost" @click="showAddLocationModal = false">Cancel</button>
             <button type="submit" class="btn btn-primary" :disabled="isLoading">Add Location</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal: Receive Purchased Stock (GRN) -->
+    <div v-if="showReceivePurchaseModal" class="modal-backdrop">
+      <div class="modal-card modal-lg">
+        <h3>Receive Purchased Stock from Procurement GRN</h3>
+        <p class="modal-subtitle">
+          Intake inspected and accepted items from a Goods Receipt Note into warehouse stock balances.
+        </p>
+
+        <form @submit.prevent="submitReceivePurchase">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Select Pending Goods Receipt *</label>
+              <select
+                class="form-select"
+                :value="receivePurchaseForm.goods_receipt_id"
+                required
+                @change="onSelectPendingGrn(($event.target as HTMLSelectElement).value)"
+              >
+                <option value="">-- Choose Inspected GRN --</option>
+                <option v-for="g in pendingGrns" :key="g.grn_id" :value="g.grn_id">
+                  {{ g.receipt_number }} — PO: {{ g.purchase_order_number }} ({{ g.vendor_name }})
+                </option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Destination Warehouse *</label>
+              <select v-model="receivePurchaseForm.warehouse_id" required class="form-select">
+                <option value="">Select Warehouse</option>
+                <option v-for="w in warehouses" :key="w.id" :value="w.id">
+                  {{ w.name }} ({{ w.code }})
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Transaction Date *</label>
+              <input v-model="receivePurchaseForm.transaction_date" type="date" required class="form-input" />
+            </div>
+            <div class="form-group">
+              <label>Reference Document</label>
+              <input
+                v-model="receivePurchaseForm.reference_document"
+                type="text"
+                placeholder="e.g. GRN-001 or Delivery Note"
+                class="form-input"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Notes / Inspection Remarks</label>
+            <input
+              v-model="receivePurchaseForm.notes"
+              type="text"
+              placeholder="Optional receiving notes..."
+              class="form-input"
+            />
+          </div>
+
+          <!-- GRN Line Items Mapping -->
+          <div v-if="selectedGrn" class="lines-section">
+            <h4>Accepted Items to Receive</h4>
+            <div v-if="receivePurchaseForm.lines.length === 0" class="empty-state">
+              No accepted lines remaining to receive for this receipt.
+            </div>
+
+            <div
+              v-for="(line, idx) in receivePurchaseForm.lines"
+              :key="line.po_item_id"
+              class="line-item-box"
+              style="border-bottom: 1px solid var(--color-border); padding: 0.75rem 0; margin-bottom: 0.75rem;"
+            >
+              <div style="font-weight: 600; margin-bottom: 0.5rem; display: flex; justify-content: space-between;">
+                <span>Line {{ idx + 1 }}: {{ line.description }}</span>
+                <span style="font-size: 0.8125rem; color: var(--color-text-muted);">
+                  Accepted: {{ line.quantity_accepted }} | Remaining: <strong>{{ line.quantity_remaining }}</strong>
+                </span>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Map to Catalog Item *</label>
+                  <select v-model="line.item_id" required class="form-select">
+                    <option value="">-- Select Item --</option>
+                    <option v-for="it in items" :key="it.id" :value="it.id">
+                      {{ it.name }} ({{ it.item_code }})
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Quantity to Receive *</label>
+                  <input
+                    v-model="line.quantity"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    :max="line.quantity_remaining"
+                    required
+                    class="form-input"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>Unit Cost</label>
+                  <input
+                    v-model="line.unit_cost"
+                    type="number"
+                    step="0.01"
+                    class="form-input"
+                  />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Batch / Lot # (if applicable)</label>
+                  <input
+                    v-model="line.batch_number"
+                    type="text"
+                    placeholder="e.g. LOT-2026-A"
+                    class="form-input"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>Expiry Date (if applicable)</label>
+                  <input
+                    v-model="line.expiry_date"
+                    type="date"
+                    class="form-input"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div
+            v-else
+            class="empty-state"
+            style="padding: 1.5rem; border: 1px dashed var(--color-border); border-radius: var(--radius-md); margin-bottom: 1rem;"
+          >
+            Please select an inspected Goods Receipt Note above to view and map its line items.
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn btn-ghost" @click="showReceivePurchaseModal = false">
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="btn btn-primary"
+              :disabled="isLoading || !selectedGrn || receivePurchaseForm.lines.length === 0"
+            >
+              Post Stock Receipt
+            </button>
           </div>
         </form>
       </div>
