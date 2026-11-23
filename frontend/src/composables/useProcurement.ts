@@ -1,4 +1,4 @@
-import { ref, watch, onMounted } from "vue";
+import { ref, watch, onMounted, getCurrentInstance } from "vue";
 import { procurementApi } from "@/api/modules/procurement";
 import { useTenantStore } from "@/stores/tenant";
 import type {
@@ -227,9 +227,11 @@ export function useProcurement() {
     loadData();
   });
 
-  onMounted(() => {
-    loadData();
-  });
+  if (getCurrentInstance()) {
+    onMounted(() => {
+      loadData();
+    });
+  }
 
   return {
     // State

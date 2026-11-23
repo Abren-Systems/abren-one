@@ -1,4 +1,4 @@
-import { ref, watch, onMounted } from "vue";
+import { ref, watch, onMounted, getCurrentInstance } from "vue";
 import { inventoryApi } from "@/api/modules/inventory";
 import { useTenantStore } from "@/stores/tenant";
 import type {
@@ -279,9 +279,11 @@ export function useInventory() {
     loadData();
   });
 
-  onMounted(() => {
-    loadData();
-  });
+  if (getCurrentInstance()) {
+    onMounted(() => {
+      loadData();
+    });
+  }
 
   return {
     // State
