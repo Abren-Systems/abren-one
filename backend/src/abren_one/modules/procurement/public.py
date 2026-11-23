@@ -10,13 +10,29 @@ from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
 
+from abren_one.modules.procurement.application.commands.approve_purchase_requisition import (
+    ApprovePurchaseRequisitionInput,
+    ApprovePurchaseRequisitionResult,
+)
+from abren_one.modules.procurement.application.commands.approve_purchase_requisition import (
+    execute as approve_purchase_requisition,
+)
 from abren_one.modules.procurement.application.commands.create_purchase_order import (
+    CreateAllocationInput,
     CreatePurchaseOrderInput,
     CreatePurchaseOrderItemInput,
     CreatePurchaseOrderResult,
 )
 from abren_one.modules.procurement.application.commands.create_purchase_order import (
     execute as create_purchase_order,
+)
+from abren_one.modules.procurement.application.commands.create_purchase_requisition import (
+    CreatePurchaseRequisitionInput,
+    CreatePurchaseRequisitionResult,
+    CreateRequisitionItemInput,
+)
+from abren_one.modules.procurement.application.commands.create_purchase_requisition import (
+    execute as create_purchase_requisition,
 )
 from abren_one.modules.procurement.application.commands.create_vendor import (
     CreateVendorInput,
@@ -47,6 +63,13 @@ from abren_one.modules.procurement.application.commands.record_goods_receipt imp
 )
 from abren_one.modules.procurement.application.commands.record_goods_receipt import (
     execute as record_goods_receipt,
+)
+from abren_one.modules.procurement.application.commands.submit_purchase_requisition import (
+    SubmitPurchaseRequisitionInput,
+    SubmitPurchaseRequisitionResult,
+)
+from abren_one.modules.procurement.application.commands.submit_purchase_requisition import (
+    execute as submit_purchase_requisition,
 )
 from abren_one.modules.procurement.domain.exceptions import (
     GoodsReceiptNotFoundError,
@@ -445,10 +468,16 @@ def list_inspected_goods_receipts(
 
 __all__ = [
     "AcceptedReceiptItem",
+    "ApprovePurchaseRequisitionInput",
+    "ApprovePurchaseRequisitionResult",
     "AuthorizationStatus",
+    "CreateAllocationInput",
     "CreatePurchaseOrderInput",
     "CreatePurchaseOrderItemInput",
     "CreatePurchaseOrderResult",
+    "CreatePurchaseRequisitionInput",
+    "CreatePurchaseRequisitionResult",
+    "CreateRequisitionItemInput",
     "CreateVendorInput",
     "CreateVendorResult",
     "GoodsReceiptDetail",
@@ -469,10 +498,14 @@ __all__ = [
     "RecordGoodsReceiptResult",
     "RecordReceiptItemInput",
     "RequisitionNotFoundError",
+    "SubmitPurchaseRequisitionInput",
+    "SubmitPurchaseRequisitionResult",
     "VendorNotFoundError",
     "VendorType",
     "VendorVerificationStatus",
+    "approve_purchase_requisition",
     "create_purchase_order",
+    "create_purchase_requisition",
     "create_vendor",
     "get_accepted_receipts_for_order",
     "get_commitment_detail",
@@ -483,4 +516,5 @@ __all__ = [
     "issue_purchase_order",
     "list_inspected_goods_receipts",
     "record_goods_receipt",
+    "submit_purchase_requisition",
 ]
