@@ -30,6 +30,9 @@ echo "==> 7. Frontend tests"
 echo "==> 8. Frontend build"
 (cd frontend && pnpm run build)
 
+echo "==> 9. Frontend E2E tests"
+(cd frontend && pnpm run test:e2e)
+
 echo "=============================================================================="
 echo " All validation gates passed successfully! "
 echo "=============================================================================="

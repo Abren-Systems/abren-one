@@ -49,6 +49,8 @@ coverage.xml
 # Node / Frontend (future)
 node_modules/
 frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
 *.tsbuildinfo
 
 # OS
