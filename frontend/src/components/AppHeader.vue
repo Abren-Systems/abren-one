@@ -3,15 +3,19 @@ import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useTenantStore } from "@/stores/tenant";
+import { useToastStore } from "@/stores/toast";
+import ModalDialog from "@/components/common/ModalDialog.vue";
 
 const authStore = useAuthStore();
 const tenantStore = useTenantStore();
+const toastStore = useToastStore();
 const router = useRouter();
 
 const showOrgModal = ref(false);
 const newOrgName = ref("");
 const newOrgSlug = ref("");
 const isCreatingOrg = ref(false);
+const orgError = ref<string | null>(null);
 
 async function handleLogout() {
   await authStore.logout();
@@ -22,24 +26,34 @@ function onOrgChange(event: Event) {
   const target = event.target as HTMLSelectElement;
   if (target.value === "__NEW__") {
     showOrgModal.value = true;
+    orgError.value = null;
+    newOrgName.value = "";
+    newOrgSlug.value = "";
     target.value = tenantStore.currentOrganizationId || "";
   } else {
     tenantStore.selectOrganization(target.value);
-    window.location.reload(); // Refresh context for views
+    window.location.reload();
   }
+}
+
+function closeOrgModal() {
+  showOrgModal.value = false;
+  orgError.value = null;
+  newOrgName.value = "";
+  newOrgSlug.value = "";
 }
 
 async function createOrg() {
   if (!newOrgName.value.trim() || !newOrgSlug.value.trim()) return;
+  orgError.value = null;
   try {
     isCreatingOrg.value = true;
     await tenantStore.provisionOrganization(newOrgName.value.trim(), newOrgSlug.value.trim());
-    showOrgModal.value = false;
-    newOrgName.value = "";
-    newOrgSlug.value = "";
+    toastStore.success(`Organization "${newOrgName.value.trim()}" provisioned successfully.`);
+    closeOrgModal();
     window.location.reload();
   } catch (err: any) {
-    alert(err?.message || "Failed to provision organization");
+    orgError.value = err?.data?.detail || err?.message || "Failed to provision organization.";
   } finally {
     isCreatingOrg.value = false;
   }
@@ -86,52 +100,58 @@ async function createOrg() {
     </div>
 
     <!-- Provision Org Modal -->
-    <div v-if="showOrgModal" class="modal-overlay" @click.self="showOrgModal = false">
-      <div class="modal-card">
-        <h3>Provision New Organization</h3>
-        <p class="modal-desc">Create a new organizational tenant boundary.</p>
+    <ModalDialog :show="showOrgModal" title="Provision New Organization" @close="closeOrgModal">
+      <form @submit.prevent="createOrg" class="modal-form">
+        <p class="modal-desc">Create a new organizational tenant boundary for your team.</p>
 
-        <form @submit.prevent="createOrg">
-          <div class="form-group">
-            <label class="form-label" for="org-name">Organization Name</label>
-            <input
-              id="org-name"
-              v-model="newOrgName"
-              type="text"
-              class="form-input"
-              required
-              placeholder="e.g. Sahel Drought Relief"
-            />
-          </div>
+        <div v-if="orgError" class="form-error-banner" role="alert">{{ orgError }}</div>
 
-          <div class="form-group">
-            <label class="form-label" for="org-slug">Slug Identifier</label>
-            <input
-              id="org-slug"
-              v-model="newOrgSlug"
-              type="text"
-              class="form-input"
-              required
-              placeholder="e.g. sahel-drought-relief"
-            />
-          </div>
+        <div class="form-group">
+          <label class="form-label" for="org-name">Organization Name *</label>
+          <input
+            id="org-name"
+            v-model="newOrgName"
+            type="text"
+            class="form-input"
+            required
+            placeholder="e.g. Sahel Drought Relief"
+            :disabled="isCreatingOrg"
+          />
+        </div>
 
-          <div class="modal-actions">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="showOrgModal = false"
-              :disabled="isCreatingOrg"
-            >
-              Cancel
-            </button>
-            <button type="submit" class="btn btn-primary" :disabled="isCreatingOrg">
-              {{ isCreatingOrg ? "Creating..." : "Provision Organization" }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div class="form-group">
+          <label class="form-label" for="org-slug">Slug Identifier *</label>
+          <input
+            id="org-slug"
+            v-model="newOrgSlug"
+            type="text"
+            class="form-input"
+            required
+            placeholder="e.g. sahel-drought-relief"
+            :disabled="isCreatingOrg"
+          />
+          <span class="field-hint">Lowercase letters, numbers and hyphens only.</span>
+        </div>
+
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="closeOrgModal"
+            :disabled="isCreatingOrg"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="btn btn-primary"
+            :disabled="isCreatingOrg || !newOrgName.trim() || !newOrgSlug.trim()"
+          >
+            {{ isCreatingOrg ? "Creating..." : "Provision Organization" }}
+          </button>
+        </div>
+      </form>
+    </ModalDialog>
   </header>
 </template>
 
@@ -218,36 +238,39 @@ async function createOrg() {
   border: 0;
 }
 
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.45);
+.modal-form {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-}
-
-.modal-card {
-  background: white;
-  border-radius: var(--radius-lg);
-  padding: 1.75rem;
-  width: 100%;
-  max-width: 440px;
-  box-shadow: var(--shadow-lg);
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .modal-desc {
   font-size: 0.875rem;
   color: var(--color-text-muted);
-  margin-top: 0.25rem;
-  margin-bottom: 1.25rem;
+  margin-top: -0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.form-error-banner {
+  background-color: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+  border-radius: 6px;
+  padding: 0.65rem 0.875rem;
+  font-size: 0.875rem;
+}
+
+.field-hint {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
 }
 
 .modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
-  margin-top: 1.5rem;
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
 }
 </style>

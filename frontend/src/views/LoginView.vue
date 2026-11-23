@@ -2,25 +2,48 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { useToastStore } from "@/stores/toast";
 
 const authStore = useAuthStore();
+const toastStore = useToastStore();
 const router = useRouter();
 
 const username = ref("");
 const password = ref("");
 const errorMessage = ref("");
+const usernameError = ref("");
+const passwordError = ref("");
+
+function validateForm(): boolean {
+  usernameError.value = "";
+  passwordError.value = "";
+  let isValid = true;
+
+  if (!username.value.trim()) {
+    usernameError.value = "Username is required.";
+    isValid = false;
+  }
+
+  if (!password.value) {
+    passwordError.value = "Password is required.";
+    isValid = false;
+  }
+
+  return isValid;
+}
 
 async function onSubmit() {
-  if (!username.value || !password.value) {
-    errorMessage.value = "Please enter both username and password.";
+  errorMessage.value = "";
+  if (!validateForm()) {
     return;
   }
-  errorMessage.value = "";
+
   try {
     await authStore.login({
-      username: username.value,
+      username: username.value.trim(),
       password: password.value,
     });
+    toastStore.success(`Signed in as ${authStore.user?.username || username.value.trim()}.`);
     router.push({ name: "dashboard" });
   } catch (err: any) {
     errorMessage.value = err?.data?.detail || err?.message || "Invalid credentials.";
@@ -41,19 +64,24 @@ async function onSubmit() {
         {{ errorMessage }}
       </div>
 
-      <form @submit.prevent="onSubmit" class="login-form">
+      <form @submit.prevent="onSubmit" class="login-form" novalidate>
         <div class="form-group">
           <label class="form-label" for="username">Username</label>
           <input
             id="username"
             v-model="username"
             type="text"
-            class="form-input"
-            required
+            :class="['form-input', { 'input-error': usernameError }]"
             autocomplete="username"
             autofocus
             placeholder="Enter your username"
+            :aria-invalid="!!usernameError"
+            aria-describedby="username-error"
+            @input="usernameError = ''"
           />
+          <span v-if="usernameError" id="username-error" class="field-error" role="alert">
+            {{ usernameError }}
+          </span>
         </div>
 
         <div class="form-group">
@@ -62,11 +90,16 @@ async function onSubmit() {
             id="password"
             v-model="password"
             type="password"
-            class="form-input"
-            required
+            :class="['form-input', { 'input-error': passwordError }]"
             autocomplete="current-password"
             placeholder="••••••••••••"
+            :aria-invalid="!!passwordError"
+            aria-describedby="password-error"
+            @input="passwordError = ''"
           />
+          <span v-if="passwordError" id="password-error" class="field-error" role="alert">
+            {{ passwordError }}
+          </span>
         </div>
 
         <button
@@ -137,6 +170,17 @@ async function onSubmit() {
 .login-form {
   display: flex;
   flex-direction: column;
+}
+
+.input-error {
+  border-color: #ef4444 !important;
+}
+
+.field-error {
+  color: #dc2626;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  font-weight: 500;
 }
 
 .login-btn {

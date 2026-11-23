@@ -1,6 +1,7 @@
 import { ref, watch, onMounted, getCurrentInstance } from "vue";
 import { programsApi } from "@/api/modules/programs";
 import { useTenantStore } from "@/stores/tenant";
+import { useToastStore } from "@/stores/toast";
 import type {
   Activity,
   CreateActivityPayload,
@@ -12,6 +13,7 @@ import type {
 
 export function usePrograms() {
   const tenantStore = useTenantStore();
+  const toastStore = useToastStore();
 
   const programs = ref<Program[]>([]);
   const projects = ref<Project[]>([]);
@@ -38,6 +40,7 @@ export function usePrograms() {
     } catch (err: unknown) {
       const error = err as Error;
       errorMessage.value = error.message || "Failed to load program hierarchy.";
+      toastStore.error(errorMessage.value);
     } finally {
       isLoading.value = false;
     }
@@ -51,11 +54,13 @@ export function usePrograms() {
     try {
       const res = await programsApi.createProgram(payload);
       successMessage.value = `Program "${payload.name}" created successfully.`;
+      toastStore.success(successMessage.value);
       await loadData();
       return res;
     } catch (err: unknown) {
       const error = err as any;
       errorMessage.value = error?.data?.detail || error.message || "Failed to create program.";
+      toastStore.error(errorMessage.value);
       throw err;
     } finally {
       isLoading.value = false;
@@ -70,11 +75,13 @@ export function usePrograms() {
     try {
       const res = await programsApi.createProject(payload);
       successMessage.value = `Project "${payload.name}" created successfully.`;
+      toastStore.success(successMessage.value);
       await loadData();
       return res;
     } catch (err: unknown) {
       const error = err as any;
       errorMessage.value = error?.data?.detail || error.message || "Failed to create project.";
+      toastStore.error(errorMessage.value);
       throw err;
     } finally {
       isLoading.value = false;
@@ -89,11 +96,13 @@ export function usePrograms() {
     try {
       const res = await programsApi.createActivity(payload);
       successMessage.value = `Activity "${payload.name}" created successfully.`;
+      toastStore.success(successMessage.value);
       await loadData();
       return res;
     } catch (err: unknown) {
       const error = err as any;
       errorMessage.value = error?.data?.detail || error.message || "Failed to create activity.";
+      toastStore.error(errorMessage.value);
       throw err;
     } finally {
       isLoading.value = false;

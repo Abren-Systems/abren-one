@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from "vue";
-import { api } from "@/api/client";
 import { useTenantStore } from "@/stores/tenant";
-import type { Program } from "@/types/program";
-import type { Beneficiary } from "@/types/beneficiary";
-import type { Donor, Grant } from "@/types/fundraising";
+import { programsApi } from "@/api/modules/programs";
+import { beneficiariesApi } from "@/api/modules/beneficiaries";
+import { fundraisingApi } from "@/api/modules/fundraising";
+import { procurementApi } from "@/api/modules/procurement";
+import { inventoryApi } from "@/api/modules/inventory";
+import SkeletonLoader from "@/components/common/SkeletonLoader.vue";
 
 const tenantStore = useTenantStore();
 
@@ -12,31 +14,40 @@ const programsCount = ref<number | null>(null);
 const beneficiariesCount = ref<number | null>(null);
 const donorsCount = ref<number | null>(null);
 const grantsCount = ref<number | null>(null);
+const requisitionsCount = ref<number | null>(null);
+const itemsCount = ref<number | null>(null);
 const isLoading = ref(false);
 
 async function loadDashboardData() {
   if (!tenantStore.currentOrganizationId) return;
   isLoading.value = true;
   try {
-    const [progs, bens, donors, grants] = await Promise.all([
-      api.get<Program[]>("/api/v1/programs/").catch(() => []),
-      api.get<Beneficiary[]>("/api/v1/beneficiaries/").catch(() => []),
-      api.get<Donor[]>("/api/v1/fundraising/donors/").catch(() => []),
-      api.get<Grant[]>("/api/v1/fundraising/grants/").catch(() => []),
+    const [progs, bens, donors, grants, reqs, items] = await Promise.all([
+      programsApi.getPrograms().catch(() => []),
+      beneficiariesApi.getBeneficiaries().catch(() => []),
+      fundraisingApi.getDonors().catch(() => []),
+      fundraisingApi.getGrants().catch(() => []),
+      procurementApi.getRequisitions().catch(() => []),
+      inventoryApi.getItems().catch(() => []),
     ]);
 
     programsCount.value = progs.length;
     beneficiariesCount.value = bens.length;
     donorsCount.value = donors.length;
     grantsCount.value = grants.length;
+    requisitionsCount.value = reqs.length;
+    itemsCount.value = items.length;
   } finally {
     isLoading.value = false;
   }
 }
 
-watch(() => tenantStore.currentOrganizationId, () => {
-  loadDashboardData();
-});
+watch(
+  () => tenantStore.currentOrganizationId,
+  () => {
+    loadDashboardData();
+  }
+);
 
 onMounted(() => {
   loadDashboardData();
@@ -59,36 +70,58 @@ onMounted(() => {
       <p>Please select or provision an organization to access operational records.</p>
     </div>
 
-    <div v-else class="metrics-grid">
-      <div class="card metric-card">
-        <span class="metric-icon">🎯</span>
-        <div class="metric-info">
-          <span class="metric-label">Active Programs</span>
-          <span class="metric-val">{{ programsCount ?? "–" }}</span>
-        </div>
+    <div v-else>
+      <div v-if="isLoading && programsCount === null" class="card">
+        <SkeletonLoader :rows="3" :header="true" header-width="250px" />
       </div>
 
-      <div class="card metric-card">
-        <span class="metric-icon">🤝</span>
-        <div class="metric-info">
-          <span class="metric-label">Beneficiaries</span>
-          <span class="metric-val">{{ beneficiariesCount ?? "–" }}</span>
+      <div v-else class="metrics-grid">
+        <div class="card metric-card">
+          <span class="metric-icon">🎯</span>
+          <div class="metric-info">
+            <span class="metric-label">Active Programs</span>
+            <span class="metric-val">{{ programsCount ?? "–" }}</span>
+          </div>
         </div>
-      </div>
 
-      <div class="card metric-card">
-        <span class="metric-icon">🏢</span>
-        <div class="metric-info">
-          <span class="metric-label">Registered Donors</span>
-          <span class="metric-val">{{ donorsCount ?? "–" }}</span>
+        <div class="card metric-card">
+          <span class="metric-icon">🤝</span>
+          <div class="metric-info">
+            <span class="metric-label">Beneficiaries</span>
+            <span class="metric-val">{{ beneficiariesCount ?? "–" }}</span>
+          </div>
         </div>
-      </div>
 
-      <div class="card metric-card">
-        <span class="metric-icon">💰</span>
-        <div class="metric-info">
-          <span class="metric-label">Active Grants</span>
-          <span class="metric-val">{{ grantsCount ?? "–" }}</span>
+        <div class="card metric-card">
+          <span class="metric-icon">🏢</span>
+          <div class="metric-info">
+            <span class="metric-label">Registered Donors</span>
+            <span class="metric-val">{{ donorsCount ?? "–" }}</span>
+          </div>
+        </div>
+
+        <div class="card metric-card">
+          <span class="metric-icon">💰</span>
+          <div class="metric-info">
+            <span class="metric-label">Active Grants</span>
+            <span class="metric-val">{{ grantsCount ?? "–" }}</span>
+          </div>
+        </div>
+
+        <div class="card metric-card">
+          <span class="metric-icon">📦</span>
+          <div class="metric-info">
+            <span class="metric-label">Procurement Requisitions</span>
+            <span class="metric-val">{{ requisitionsCount ?? "–" }}</span>
+          </div>
+        </div>
+
+        <div class="card metric-card">
+          <span class="metric-icon">📊</span>
+          <div class="metric-info">
+            <span class="metric-label">Tracked Inventory Items</span>
+            <span class="metric-val">{{ itemsCount ?? "–" }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -125,6 +158,18 @@ onMounted(() => {
           <span class="tile-icon">📑</span>
           <span class="tile-title">Finance & General Ledger</span>
           <span class="tile-desc">Chart of Accounts, balanced journal entries, and live trial balance</span>
+        </router-link>
+
+        <router-link to="/procurement" class="tile">
+          <span class="tile-icon">📦</span>
+          <span class="tile-title">Procurement & Vendors</span>
+          <span class="tile-desc">Purchase requisitions, vendor approvals, and purchase orders</span>
+        </router-link>
+
+        <router-link to="/inventory" class="tile">
+          <span class="tile-icon">🏭</span>
+          <span class="tile-title">Inventory & Warehousing</span>
+          <span class="tile-desc">Warehouses, stock receipts, issues, transfers, and ledger movements</span>
         </router-link>
       </div>
     </div>

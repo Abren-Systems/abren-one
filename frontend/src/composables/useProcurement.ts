@@ -1,6 +1,7 @@
 import { ref, watch, onMounted, getCurrentInstance } from "vue";
 import { procurementApi } from "@/api/modules/procurement";
 import { useTenantStore } from "@/stores/tenant";
+import { useToastStore } from "@/stores/toast";
 import type {
   GoodsReceiptNote,
   PurchaseOrder,
@@ -10,6 +11,7 @@ import type {
 
 export function useProcurement() {
   const tenantStore = useTenantStore();
+  const toastStore = useToastStore();
 
   const vendors = ref<Vendor[]>([]);
   const requisitions = ref<PurchaseRequisition[]>([]);
@@ -54,11 +56,13 @@ export function useProcurement() {
     try {
       const res = await procurementApi.createVendor(data);
       successMessage.value = "Vendor registered successfully.";
+      toastStore.success(successMessage.value);
       await loadData();
       return res;
     } catch (err: unknown) {
       const error = err as Error;
       errorMessage.value = error.message || "Failed to create vendor.";
+      toastStore.error(errorMessage.value);
       throw err;
     } finally {
       isLoading.value = false;
@@ -70,10 +74,12 @@ export function useProcurement() {
     try {
       await procurementApi.deactivateVendor(vendorId);
       successMessage.value = "Vendor deactivated.";
+      toastStore.success(successMessage.value);
       await loadData();
     } catch (err: unknown) {
       const error = err as Error;
       errorMessage.value = error.message || "Failed to deactivate vendor.";
+      toastStore.error(errorMessage.value);
       throw err;
     } finally {
       isLoading.value = false;
@@ -85,11 +91,13 @@ export function useProcurement() {
     try {
       const res = await procurementApi.createRequisition(data);
       successMessage.value = "Requisition created.";
+      toastStore.success(successMessage.value);
       await loadData();
       return res;
     } catch (err: unknown) {
       const error = err as Error;
       errorMessage.value = error.message || "Failed to create requisition.";
+      toastStore.error(errorMessage.value);
       throw err;
     } finally {
       isLoading.value = false;

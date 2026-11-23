@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { useRoute } from "vue-router";
 import AppHeader from "@/components/AppHeader.vue";
 import AppNavigation from "@/components/AppNavigation.vue";
+import ToastContainer from "@/components/common/ToastContainer.vue";
 
 const route = useRoute();
 const isLoginPage = computed(() => route.name === "login");
@@ -22,6 +23,9 @@ const isLoginPage = computed(() => route.name === "login");
       </main>
     </div>
   </div>
+
+  <!-- Global toast notifications — rendered via Teleport to body -->
+  <ToastContainer />
 </template>
 
 <style scoped>

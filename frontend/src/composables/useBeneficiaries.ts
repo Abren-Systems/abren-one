@@ -1,6 +1,7 @@
 import { ref, watch, onMounted, getCurrentInstance } from "vue";
 import { beneficiariesApi } from "@/api/modules/beneficiaries";
 import { useTenantStore } from "@/stores/tenant";
+import { useToastStore } from "@/stores/toast";
 import type {
   Beneficiary,
   RecordDeliveryPayload,
@@ -10,6 +11,7 @@ import type {
 
 export function useBeneficiaries() {
   const tenantStore = useTenantStore();
+  const toastStore = useToastStore();
 
   const beneficiaries = ref<Beneficiary[]>([]);
   const deliveries = ref<ServiceDelivery[]>([]);
@@ -33,6 +35,7 @@ export function useBeneficiaries() {
     } catch (err: unknown) {
       const error = err as Error;
       errorMessage.value = error.message || "Failed to load beneficiary records.";
+      toastStore.error(errorMessage.value);
     } finally {
       isLoading.value = false;
     }
@@ -47,11 +50,13 @@ export function useBeneficiaries() {
       const res = await beneficiariesApi.registerBeneficiary(payload);
       const name = payload.household_name || `${payload.first_name || ""} ${payload.last_name || ""}`.trim() || "Beneficiary";
       successMessage.value = `Registered "${name}" successfully.`;
+      toastStore.success(successMessage.value);
       await loadData();
       return res;
     } catch (err: unknown) {
       const error = err as any;
       errorMessage.value = error?.data?.detail || error.message || "Failed to register beneficiary.";
+      toastStore.error(errorMessage.value);
       throw err;
     } finally {
       isLoading.value = false;
@@ -66,11 +71,13 @@ export function useBeneficiaries() {
     try {
       const res = await beneficiariesApi.recordDelivery(payload);
       successMessage.value = "Service delivery event recorded successfully.";
+      toastStore.success(successMessage.value);
       await loadData();
       return res;
     } catch (err: unknown) {
       const error = err as any;
       errorMessage.value = error?.data?.detail || error.message || "Failed to record service delivery.";
+      toastStore.error(errorMessage.value);
       throw err;
     } finally {
       isLoading.value = false;

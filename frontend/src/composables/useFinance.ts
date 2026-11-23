@@ -1,6 +1,7 @@
 import { ref, watch, onMounted, getCurrentInstance } from "vue";
 import { financeApi } from "@/api/modules/finance";
 import { useTenantStore } from "@/stores/tenant";
+import { useToastStore } from "@/stores/toast";
 import type {
   Account,
   CreateAccountPayload,
@@ -11,6 +12,7 @@ import type {
 
 export function useFinance() {
   const tenantStore = useTenantStore();
+  const toastStore = useToastStore();
 
   const accounts = ref<Account[]>([]);
   const journalEntries = ref<JournalEntry[]>([]);
@@ -39,6 +41,7 @@ export function useFinance() {
     } catch (err: unknown) {
       const error = err as Error;
       errorMessage.value = error.message || "Failed to load financial records.";
+      toastStore.error(errorMessage.value);
     } finally {
       isLoading.value = false;
     }
@@ -52,11 +55,13 @@ export function useFinance() {
     try {
       const res = await financeApi.createAccount(data);
       successMessage.value = `Account ${data.code} created successfully.`;
+      toastStore.success(successMessage.value);
       await loadData();
       return res;
     } catch (err: unknown) {
       const error = err as Error;
       errorMessage.value = error.message || "Failed to create account.";
+      toastStore.error(errorMessage.value);
       throw err;
     } finally {
       isLoading.value = false;
@@ -71,11 +76,13 @@ export function useFinance() {
     try {
       const res = await financeApi.createJournalEntry(data);
       successMessage.value = "Journal entry recorded successfully.";
+      toastStore.success(successMessage.value);
       await loadData();
       return res;
     } catch (err: unknown) {
       const error = err as Error;
       errorMessage.value = error.message || "Failed to record journal entry.";
+      toastStore.error(errorMessage.value);
       throw err;
     } finally {
       isLoading.value = false;
@@ -90,10 +97,12 @@ export function useFinance() {
     try {
       await financeApi.postJournalEntry(id);
       successMessage.value = "Journal entry posted to general ledger.";
+      toastStore.success(successMessage.value);
       await loadData();
     } catch (err: unknown) {
       const error = err as Error;
       errorMessage.value = error.message || "Failed to post journal entry.";
+      toastStore.error(errorMessage.value);
       throw err;
     } finally {
       isLoading.value = false;
@@ -108,11 +117,13 @@ export function useFinance() {
     try {
       const res = await financeApi.reverseJournalEntry(id, reason);
       successMessage.value = "Journal entry reversed with offsetting entry.";
+      toastStore.success(successMessage.value);
       await loadData();
       return res;
     } catch (err: unknown) {
       const error = err as Error;
       errorMessage.value = error.message || "Failed to reverse journal entry.";
+      toastStore.error(errorMessage.value);
       throw err;
     } finally {
       isLoading.value = false;
