@@ -68,18 +68,18 @@ export const procurementApi = {
 
   // Goods Receipts
   async getGoodsReceipts(): Promise<GoodsReceiptNote[]> {
-    return api.get<GoodsReceiptNote[]>("/api/v1/procurement/goods-receipts/");
+    return api.get<GoodsReceiptNote[]>("/api/v1/procurement/receipts/");
   },
 
   async getGoodsReceipt(id: string): Promise<GoodsReceiptNote> {
-    return api.get<GoodsReceiptNote>(`/api/v1/procurement/goods-receipts/${id}/`);
+    return api.get<GoodsReceiptNote>(`/api/v1/procurement/receipts/${id}/`);
   },
 
   async createGoodsReceipt(data: unknown): Promise<{ goods_receipt_id: string }> {
-    return api.post("/api/v1/procurement/goods-receipts/", data);
+    return api.post("/api/v1/procurement/receipts/", data);
   },
 
   async inspectGoodsReceipt(id: string, data: unknown): Promise<void> {
-    return api.post(`/api/v1/procurement/goods-receipts/${id}/inspect/`, data);
+    return api.post(`/api/v1/procurement/receipts/${id}/inspect/`, data);
   },
 };

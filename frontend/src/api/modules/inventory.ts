@@ -119,15 +119,15 @@ export const inventoryApi = {
 
   // Stock Movements
   async postMovement(type: string, payload: unknown): Promise<{ transaction_id: string }> {
-    return api.post(`/api/v1/inventory/movements/${type}/`, payload);
+    return api.post(`/api/v1/inventory/transactions/${type}/`, payload);
   },
 
   // Intake Bridge
   async getPendingGrns(): Promise<PendingGRN[]> {
-    return api.get<PendingGRN[]>("/api/v1/inventory/intake/pending-grns/");
+    return api.get<PendingGRN[]>("/api/v1/inventory/pending-grns/");
   },
 
   async postGrnIntake(payload: unknown): Promise<{ transaction_id: string }> {
-    return api.post("/api/v1/inventory/intake/receive-grn/", payload);
+    return api.post("/api/v1/inventory/transactions/receive-purchase/", payload);
   },
 };
