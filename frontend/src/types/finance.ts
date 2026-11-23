@@ -47,3 +47,34 @@ export interface TrialBalance {
   is_balanced: boolean;
   currency: string;
 }
+
+export interface CreateAccountPayload {
+  code: string;
+  name: string;
+  account_type: "asset" | "liability" | "equity" | "revenue" | "expense";
+  currency?: string;
+  description?: string;
+  parent_id?: string | null;
+}
+
+export interface CreateJournalLinePayload {
+  account_id: string;
+  debit: number;
+  credit: number;
+  memo?: string;
+}
+
+export interface CreateJournalEntryPayload {
+  entry_date: string;
+  memo: string;
+  currency?: string;
+  post_immediately?: boolean;
+  lines: CreateJournalLinePayload[];
+  program_id?: string | null;
+  grant_id?: string | null;
+  donation_id?: string | null;
+}
+
+export interface ReverseJournalEntryPayload {
+  reason: string;
+}
