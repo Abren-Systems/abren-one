@@ -74,6 +74,42 @@ async function recordDonation() {
   }
 }
 
+async function awardGrant(grantId: string) {
+  try {
+    await api.post(`/api/v1/fundraising/grants/${grantId}/award/`, {});
+    await loadData();
+  } catch (err: any) {
+    alert(err?.data?.detail || err?.message || "Failed to award grant");
+  }
+}
+
+async function activateGrant(grantId: string) {
+  try {
+    await api.post(`/api/v1/fundraising/grants/${grantId}/activate/`, {});
+    await loadData();
+  } catch (err: any) {
+    alert(err?.data?.detail || err?.message || "Failed to activate grant");
+  }
+}
+
+async function closeGrant(grantId: string) {
+  if (!confirm("Are you sure you want to close this grant?")) return;
+  try {
+    await api.post(`/api/v1/fundraising/grants/${grantId}/close/`, {});
+    await loadData();
+  } catch (err: any) {
+    alert(err?.data?.detail || err?.message || "Failed to close grant");
+  }
+}
+
+function getGrantBadgeClass(status: string) {
+  if (status === "active") return "badge-active";
+  if (status === "awarded") return "badge-awarded";
+  if (status === "proposed") return "badge-proposed";
+  if (status === "closed") return "badge-closed";
+  return "";
+}
+
 watch(() => tenantStore.currentOrganizationId, () => loadData());
 onMounted(() => loadData());
 </script>
@@ -140,6 +176,7 @@ onMounted(() => loadData());
             <th>Reference</th>
             <th>Amount</th>
             <th>Status</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -148,7 +185,31 @@ onMounted(() => loadData());
             <td>{{ g.donor_name }}</td>
             <td><code>{{ g.reference_code }}</code></td>
             <td>{{ g.total_amount }} {{ g.currency }}</td>
-            <td><span class="badge badge-active">{{ g.status }}</span></td>
+            <td><span class="badge" :class="getGrantBadgeClass(g.status)">{{ g.status }}</span></td>
+            <td>
+              <button
+                v-if="g.status === 'proposed'"
+                @click="awardGrant(g.id)"
+                class="btn-table-action btn-award"
+              >
+                Award
+              </button>
+              <button
+                v-else-if="g.status === 'awarded'"
+                @click="activateGrant(g.id)"
+                class="btn-table-action btn-activate"
+              >
+                Activate
+              </button>
+              <button
+                v-else-if="g.status === 'active'"
+                @click="closeGrant(g.id)"
+                class="btn-table-action btn-close-grant"
+              >
+                Close
+              </button>
+              <span v-else class="text-muted">–</span>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -245,5 +306,46 @@ onMounted(() => loadData());
   color: var(--color-text-muted);
   font-size: 0.875rem;
   padding: 1rem 0;
+}
+.btn-table-action {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+.btn-award {
+  background-color: #fef3c7;
+  color: #92400e;
+  border-color: #fde68a;
+}
+.btn-award:hover {
+  background-color: #fde68a;
+}
+.btn-activate {
+  background-color: #dcfce7;
+  color: #166534;
+  border-color: #bbf7d0;
+}
+.btn-activate:hover {
+  background-color: #bbf7d0;
+}
+.btn-close-grant {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border-color: #fecaca;
+}
+.btn-close-grant:hover {
+  background-color: #fecaca;
+}
+.badge-closed {
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+.text-muted {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
 }
 </style>

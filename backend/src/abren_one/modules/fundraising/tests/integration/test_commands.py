@@ -5,6 +5,24 @@ from decimal import Decimal
 import pytest
 from django.contrib.auth import get_user_model
 
+from abren_one.modules.fundraising.application.commands.activate_grant import (
+    ActivateGrantInput,
+)
+from abren_one.modules.fundraising.application.commands.activate_grant import (
+    execute as activate_grant,
+)
+from abren_one.modules.fundraising.application.commands.award_grant import (
+    AwardGrantInput,
+)
+from abren_one.modules.fundraising.application.commands.award_grant import (
+    execute as award_grant,
+)
+from abren_one.modules.fundraising.application.commands.close_grant import (
+    CloseGrantInput,
+)
+from abren_one.modules.fundraising.application.commands.close_grant import (
+    execute as close_grant,
+)
 from abren_one.modules.fundraising.application.commands.create_donor import (
     CreateDonorInput,
 )
@@ -52,7 +70,7 @@ from abren_one.modules.fundraising.domain.value_objects import (
     DonorStatus,
     GrantStatus,
 )
-from abren_one.modules.fundraising.models import Donor, Grant
+from abren_one.modules.fundraising.models import Donor
 from abren_one.modules.organizations.public import (
     CreateOrganizationInput,
     create_organization,
@@ -231,8 +249,9 @@ class TestFundraisingCommandsAndQueries:
                 end_date=date(2026, 12, 31),
             )
         )
-        # Transition grant to active
-        Grant.objects.filter(id=grant_res.grant_id).update(status=GrantStatus.ACTIVE.value)
+        # Transition grant to active via domain commands
+        award_grant(AwardGrantInput(context=self.context, grant_id=grant_res.grant_id))
+        activate_grant(ActivateGrantInput(context=self.context, grant_id=grant_res.grant_id))
 
         record_donation(
             RecordDonationInput(
@@ -262,7 +281,8 @@ class TestFundraisingCommandsAndQueries:
                 end_date=date(2026, 12, 31),
             )
         )
-        Grant.objects.filter(id=grant.grant_id).update(status=GrantStatus.ACTIVE.value)
+        award_grant(AwardGrantInput(context=self.context, grant_id=grant.grant_id))
+        activate_grant(ActivateGrantInput(context=self.context, grant_id=grant.grant_id))
 
         # Try to record donation from Donor B against Donor A's grant
         with pytest.raises(GrantMismatchError):
@@ -315,24 +335,6 @@ class TestFundraisingCommandsAndQueries:
             get_donation(donation_id=uuid.uuid4(), organization_id=self.org_id)
 
     def test_grant_lifecycle_transitions(self) -> None:
-        from abren_one.modules.fundraising.application.commands.activate_grant import (
-            ActivateGrantInput,
-        )
-        from abren_one.modules.fundraising.application.commands.activate_grant import (
-            execute as activate_grant,
-        )
-        from abren_one.modules.fundraising.application.commands.award_grant import (
-            AwardGrantInput,
-        )
-        from abren_one.modules.fundraising.application.commands.award_grant import (
-            execute as award_grant,
-        )
-        from abren_one.modules.fundraising.application.commands.close_grant import (
-            CloseGrantInput,
-        )
-        from abren_one.modules.fundraising.application.commands.close_grant import (
-            execute as close_grant,
-        )
         from abren_one.modules.fundraising.domain.exceptions import (
             InvalidStateTransitionError,
         )

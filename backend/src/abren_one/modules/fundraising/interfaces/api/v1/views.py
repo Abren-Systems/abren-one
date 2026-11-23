@@ -6,6 +6,24 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from abren_one.modules.fundraising.application.commands.activate_grant import (
+    ActivateGrantInput,
+)
+from abren_one.modules.fundraising.application.commands.activate_grant import (
+    execute as activate_grant,
+)
+from abren_one.modules.fundraising.application.commands.award_grant import (
+    AwardGrantInput,
+)
+from abren_one.modules.fundraising.application.commands.award_grant import (
+    execute as award_grant,
+)
+from abren_one.modules.fundraising.application.commands.close_grant import (
+    CloseGrantInput,
+)
+from abren_one.modules.fundraising.application.commands.close_grant import (
+    execute as close_grant,
+)
 from abren_one.modules.fundraising.application.commands.create_donor import (
     CreateDonorInput,
 )
@@ -187,6 +205,54 @@ class GrantDetailView(APIView):
     def get(self, request: Request, grant_id: uuid.UUID) -> Response:
         grant = get_grant(grant_id=grant_id, organization_id=request.org_context.organization_id)
         return Response(GrantResponseSerializer(grant).data)
+
+
+class AwardGrantView(APIView):
+    """Transition a proposed grant to awarded status (§7.2)."""
+
+    permission_classes = [
+        IsAuthenticated,
+        HasOrganizationContext,
+        require_permission("grants:manage"),
+    ]
+
+    def post(self, request: Request, grant_id: uuid.UUID) -> Response:
+        context = build_execution_context(request)
+        notes = request.data.get("notes", "") if isinstance(request.data, dict) else ""
+        result = award_grant(AwardGrantInput(context=context, grant_id=grant_id, notes=notes))
+        return Response({"grant_id": str(result.grant_id), "status": result.status}, status=status.HTTP_200_OK)
+
+
+class ActivateGrantView(APIView):
+    """Transition an awarded grant to active status (§7.2)."""
+
+    permission_classes = [
+        IsAuthenticated,
+        HasOrganizationContext,
+        require_permission("grants:manage"),
+    ]
+
+    def post(self, request: Request, grant_id: uuid.UUID) -> Response:
+        context = build_execution_context(request)
+        notes = request.data.get("notes", "") if isinstance(request.data, dict) else ""
+        result = activate_grant(ActivateGrantInput(context=context, grant_id=grant_id, notes=notes))
+        return Response({"grant_id": str(result.grant_id), "status": result.status}, status=status.HTTP_200_OK)
+
+
+class CloseGrantView(APIView):
+    """Transition a grant to closed status (§7.2)."""
+
+    permission_classes = [
+        IsAuthenticated,
+        HasOrganizationContext,
+        require_permission("grants:manage"),
+    ]
+
+    def post(self, request: Request, grant_id: uuid.UUID) -> Response:
+        context = build_execution_context(request)
+        reason = request.data.get("reason", "") if isinstance(request.data, dict) else ""
+        result = close_grant(CloseGrantInput(context=context, grant_id=grant_id, reason=reason))
+        return Response({"grant_id": str(result.grant_id), "status": result.status}, status=status.HTTP_200_OK)
 
 
 class DonationListCreateView(APIView):

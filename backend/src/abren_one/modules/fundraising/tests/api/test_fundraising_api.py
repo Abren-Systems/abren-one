@@ -100,6 +100,60 @@ class TestFundraisingAPI:
         assert detail_resp.status_code == status.HTTP_200_OK
         assert detail_resp.data["title"] == "Global Health Grant"
         assert detail_resp.data["reference_code"] == "GHG-2026-01"
+        assert detail_resp.data["status"] == "proposed"
+
+    def test_grant_lifecycle_transitions_api(self) -> None:
+        donor = Donor.objects.create(
+            organization_id=self.org_id,
+            name="UNICEF Funding Partner",
+            donor_type="foundation",
+        )
+        create_resp = self.client.post(
+            "/api/v1/fundraising/grants/",
+            {
+                "donor_id": str(donor.id),
+                "title": "Child Nutrition Initiative",
+                "reference_code": "CNI-2026-99",
+                "total_amount": "250000.00",
+                "currency": "USD",
+                "start_date": "2026-01-01",
+                "end_date": "2026-12-31",
+            },
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert create_resp.status_code == status.HTTP_201_CREATED
+        grant_id = create_resp.data["grant_id"]
+
+        # Award grant
+        award_resp = self.client.post(
+            f"/api/v1/fundraising/grants/{grant_id}/award/",
+            {"notes": "Grant contract signed and countersigned."},
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert award_resp.status_code == status.HTTP_200_OK
+        assert award_resp.data["status"] == "awarded"
+
+        # Activate grant
+        activate_resp = self.client.post(
+            f"/api/v1/fundraising/grants/{grant_id}/activate/",
+            {"notes": "First tranche deposited in escrow."},
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert activate_resp.status_code == status.HTTP_200_OK
+        assert activate_resp.data["status"] == "active"
+
+        # Close grant
+        close_resp = self.client.post(
+            f"/api/v1/fundraising/grants/{grant_id}/close/",
+            {"reason": "Program activities concluded and audited."},
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org_id),
+        )
+        assert close_resp.status_code == status.HTTP_200_OK
+        assert close_resp.data["status"] == "closed"
 
     def test_record_and_list_donations(self) -> None:
         donor = Donor.objects.create(
