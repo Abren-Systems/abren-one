@@ -40,9 +40,13 @@ from abren_one.modules.finance.public import (
     post_journal_entry,
 )
 from abren_one.modules.fundraising.public import (
+    ActivateGrantInput,
+    AwardGrantInput,
     CreateDonorInput,
     CreateGrantInput,
     RecordDonationInput,
+    activate_grant,
+    award_grant,
     create_donor,
     create_grant,
     get_donor,
@@ -203,11 +207,9 @@ class TestNgoLifecycleWorkflow:
         )
         grant_id = grant_res.grant_id
 
-        # Transition grant to active status so donations can be recorded against it
-        from abren_one.modules.fundraising.domain.value_objects import GrantStatus
-        from abren_one.modules.fundraising.models import Grant
-
-        Grant.objects.filter(id=grant_id).update(status=GrantStatus.ACTIVE.value)
+        # Award and activate grant via public commands
+        award_grant(AwardGrantInput(context=tenant_ctx, grant_id=grant_id))
+        activate_grant(ActivateGrantInput(context=tenant_ctx, grant_id=grant_id))
 
         donation_res = record_donation(
             RecordDonationInput(

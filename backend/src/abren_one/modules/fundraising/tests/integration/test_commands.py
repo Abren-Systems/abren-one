@@ -313,3 +313,65 @@ class TestFundraisingCommandsAndQueries:
         # 3. Nonexistent donation ID
         with pytest.raises(DonationNotFoundError, match="not found"):
             get_donation(donation_id=uuid.uuid4(), organization_id=self.org_id)
+
+    def test_grant_lifecycle_transitions(self) -> None:
+        from abren_one.modules.fundraising.application.commands.activate_grant import (
+            ActivateGrantInput,
+        )
+        from abren_one.modules.fundraising.application.commands.activate_grant import (
+            execute as activate_grant,
+        )
+        from abren_one.modules.fundraising.application.commands.award_grant import (
+            AwardGrantInput,
+        )
+        from abren_one.modules.fundraising.application.commands.award_grant import (
+            execute as award_grant,
+        )
+        from abren_one.modules.fundraising.application.commands.close_grant import (
+            CloseGrantInput,
+        )
+        from abren_one.modules.fundraising.application.commands.close_grant import (
+            execute as close_grant,
+        )
+        from abren_one.modules.fundraising.domain.exceptions import (
+            InvalidStateTransitionError,
+        )
+
+        donor = create_donor(
+            CreateDonorInput(
+                context=self.context,
+                name="Lifecycle Grantor",
+                donor_type="foundation",
+            )
+        )
+        grant = create_grant(
+            CreateGrantInput(
+                context=self.context,
+                donor_id=donor.donor_id,
+                title="Education Capacity Grant",
+                reference_code=f"EDU-{uuid.uuid4().hex[:6].upper()}",
+                total_amount=Decimal("75000.00"),
+                start_date=date(2026, 1, 1),
+                end_date=date(2026, 12, 31),
+            )
+        )
+
+        # Proposed -> cannot activate directly without award
+        with pytest.raises(InvalidStateTransitionError, match="Cannot transition"):
+            activate_grant(ActivateGrantInput(context=self.context, grant_id=grant.grant_id))
+
+        # Proposed -> Awarded
+        award_res = award_grant(AwardGrantInput(context=self.context, grant_id=grant.grant_id))
+        assert award_res.status == "awarded"
+
+        # Awarded -> Active
+        act_res = activate_grant(ActivateGrantInput(context=self.context, grant_id=grant.grant_id))
+        assert act_res.status == "active"
+
+        # Active -> Closed
+        close_res = close_grant(CloseGrantInput(context=self.context, grant_id=grant.grant_id))
+        assert close_res.status == "closed"
+
+        # Closed -> cannot award or activate again
+        with pytest.raises(InvalidStateTransitionError, match="Cannot transition"):
+            award_grant(AwardGrantInput(context=self.context, grant_id=grant.grant_id))

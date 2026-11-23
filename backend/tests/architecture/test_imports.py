@@ -260,6 +260,38 @@ class TestCrossModuleImportsThroughPublic:
 
         collector.assert_clean("Integration modules must not import module internals")
 
+    def test_integration_tests_import_via_public_only(
+        self,
+        backend_root: Path,
+    ) -> None:
+        """Integration tests under tests/integration/ must interact with
+        business modules exclusively via *.public, never reaching into
+        internal application, domain, models, or infrastructure layers.
+        """
+        integration_tests_dir = backend_root / "tests" / "integration"
+        if not integration_tests_dir.exists():
+            return
+
+        collector = ViolationCollector()
+        for imp in extract_all_imports(integration_tests_dir):
+            is_violation, target_module = _is_internal_cross_module_import(
+                imp.module,
+                source_module_name=None,
+            )
+            if is_violation:
+                collector.add(
+                    rule="integration-test-public-only",
+                    message=(
+                        f"Integration test `{imp.filepath.name}` imports internal subpackage of "
+                        f"module `{target_module}`: `{imp.module}` — must use "
+                        f"`abren_one.modules.{target_module}.public`."
+                    ),
+                    filepath=imp.filepath,
+                    lineno=imp.lineno,
+                )
+
+        collector.assert_clean("Integration tests must import through public.py only")
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Rule 4 — Interface layers do NOT bypass the application layer  (§2.2)
@@ -394,6 +426,41 @@ class TestNoCircularModuleDependencies:
                 f"Break the cycle by using events, public interfaces, "
                 f"or restructuring the dependency."
             )
+
+    def test_dependencies_comply_with_allowed_dag(self, modules_root: Path) -> None:
+        """Enforce that module cross-dependencies strictly comply with the
+        declared architectural dependency directed acyclic graph (DAG).
+        Any new cross-module dependency requires deliberate architectural approval.
+        """
+        allowed_dag: dict[str, set[str]] = {
+            "organizations": set(),
+            "programs": {"organizations"},
+            "beneficiaries": {"organizations", "programs"},
+            "fundraising": {"organizations", "programs"},
+            "procurement": {"organizations", "programs"},
+            "finance": {"organizations", "programs", "fundraising"},
+            "inventory": {"organizations", "procurement"},
+        }
+
+        graph = self._build_dependency_graph(modules_root)
+        collector = ViolationCollector()
+
+        for source_module, actual_deps in sorted(graph.items()):
+            allowed_deps = allowed_dag.get(source_module, set())
+            unauthorized_deps = actual_deps - allowed_deps
+            if unauthorized_deps:
+                collector.add(
+                    rule="allowed-dependency-dag",
+                    message=(
+                        f"Module `{source_module}` has unauthorized cross-module dependencies: "
+                        f"{sorted(unauthorized_deps)}. Allowed dependencies for `{source_module}`: "
+                        f"{sorted(allowed_deps)}."
+                    ),
+                    filepath=modules_root / source_module,
+                    lineno=0,
+                )
+
+        collector.assert_clean("Cross-module dependencies must strictly adhere to the declared DAG")
 
 
 # ═══════════════════════════════════════════════════════════════════════════

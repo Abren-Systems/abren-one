@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import { api } from "@/api/client";
+import CreateVendorModal from "@/components/procurement/CreateVendorModal.vue";
 import { useTenantStore } from "@/stores/tenant";
 import type {
   GoodsReceiptNote,
@@ -122,14 +123,6 @@ const inspectionLines = ref<InspectionFormLine[]>([]);
 
 // ── Vendor Form State ──
 const isCreatingVendor = ref(false);
-const vendorName = ref("");
-const vendorType = ref<"goods" | "services" | "consulting">("goods");
-const vendorTaxId = ref("");
-const vendorCountry = ref("");
-const vendorContact = ref("");
-const vendorEmail = ref("");
-const vendorPhone = ref("");
-const vendorTerms = ref("Net 30");
 
 // ── Load All Data ──
 async function loadData() {
@@ -367,27 +360,13 @@ async function submitInspection() {
 }
 
 // ── Actions: Vendors ──
-async function submitNewVendor() {
-  if (!vendorName.value.trim()) {
-    errorMessage.value = "Vendor name is required.";
-    return;
-  }
+async function handleCreateVendorSubmit(payload: any) {
   isLoading.value = true;
   errorMessage.value = null;
   try {
-    await api.post("/api/v1/procurement/vendors/", {
-      name: vendorName.value.trim(),
-      vendor_type: vendorType.value,
-      tax_id: vendorTaxId.value.trim(),
-      country: vendorCountry.value.trim(),
-      contact_name: vendorContact.value.trim(),
-      email: vendorEmail.value.trim(),
-      phone: vendorPhone.value.trim(),
-      default_payment_terms: vendorTerms.value.trim(),
-    });
+    await api.post("/api/v1/procurement/vendors/", payload);
     successMessage.value = "Vendor created successfully.";
     isCreatingVendor.value = false;
-    vendorName.value = "";
     await loadData();
   } catch (err: any) {
     errorMessage.value = err.message || "Failed to create vendor.";
@@ -940,56 +919,12 @@ async function submitNewVendor() {
     <!-- TAB 4: SUPPLIERS & DIRECTORY -->
     <div v-if="activeTab === 'vendors'" class="tab-content">
       <!-- Create Vendor Modal -->
-      <div v-if="isCreatingVendor" class="modal-backdrop">
-        <div class="modal-card">
-          <div class="modal-header">
-            <h3>Add New Supplier / Vendor</h3>
-            <button class="modal-close" @click="isCreatingVendor = false">✕</button>
-          </div>
-          <div class="modal-body">
-            <div class="form-row">
-              <div class="form-group flex-2">
-                <label>Vendor Name</label>
-                <input v-model="vendorName" type="text" placeholder="e.g. Acme Pharmaceuticals Ltd" />
-              </div>
-              <div class="form-group flex-1">
-                <label>Classification</label>
-                <select v-model="vendorType">
-                  <option value="goods">Goods Supplier</option>
-                  <option value="services">Service Contractor</option>
-                  <option value="consulting">Professional Consulting</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group flex-1">
-                <label>Tax ID / Registration</label>
-                <input v-model="vendorTaxId" type="text" placeholder="TIN / VAT" />
-              </div>
-              <div class="form-group flex-1">
-                <label>Default Terms</label>
-                <input v-model="vendorTerms" type="text" placeholder="e.g. Net 30" />
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group flex-1">
-                <label>Contact Person</label>
-                <input v-model="vendorContact" type="text" />
-              </div>
-              <div class="form-group flex-1">
-                <label>Email</label>
-                <input v-model="vendorEmail" type="email" />
-              </div>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-secondary" @click="isCreatingVendor = false">Cancel</button>
-            <button class="btn btn-primary" :disabled="isLoading" @click="submitNewVendor">
-              Save Supplier
-            </button>
-          </div>
-        </div>
-      </div>
+      <CreateVendorModal
+        :show="isCreatingVendor"
+        :is-loading="isLoading"
+        @close="isCreatingVendor = false"
+        @submit="handleCreateVendorSubmit"
+      />
 
       <!-- Vendor List Table -->
       <div class="table-container">

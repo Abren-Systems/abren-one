@@ -7,6 +7,9 @@ from uuid import UUID
 from django.db import transaction
 from django.utils import timezone
 
+from abren_one.modules.finance.application.number_generation import (
+    generate_journal_entry_number,
+)
 from abren_one.modules.finance.domain.exceptions import (
     AccountNotFoundError,
     FinanceDomainError,
@@ -57,29 +60,6 @@ class CreateJournalEntryResult:
     status: str
     total_debits: Decimal
     total_credits: Decimal
-
-
-def _generate_entry_number(org_id: UUID, entry_date: date) -> str:
-    """Generate a sequential entry number for the year with concurrency locking, e.g. JE-2026-0001."""
-    year = entry_date.year
-    prefix = f"JE-{year}-"
-    last_entry = (
-        JournalEntry.objects.select_for_update()
-        .filter(
-            organization_id=org_id,
-            entry_number__startswith=prefix,
-        )
-        .order_by("-entry_number")
-        .first()
-    )
-    next_seq = 1
-    if last_entry:
-        try:
-            seq_part = last_entry.entry_number.split("-")[-1]
-            next_seq = int(seq_part) + 1
-        except ValueError, IndexError:
-            next_seq = 1
-    return f"{prefix}{next_seq:04d}"
 
 
 @transaction.atomic
@@ -146,7 +126,7 @@ def execute(data: CreateJournalEntryInput) -> CreateJournalEntryResult:
 
     entry_num = data.entry_number.strip()
     if not entry_num:
-        entry_num = _generate_entry_number(org.id, data.entry_date)
+        entry_num = generate_journal_entry_number(org.id, data.entry_date)
     elif JournalEntry.objects.filter(organization_id=org.id, entry_number=entry_num).exists():
         raise FinanceDomainError(f"Journal entry number '{entry_num}' already exists.")
 

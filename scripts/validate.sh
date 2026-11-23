@@ -24,6 +24,12 @@ uv run lint-imports
 echo "==> 6. Pytest test suite"
 uv run pytest
 
+echo "==> 7. Frontend tests"
+(cd frontend && pnpm test)
+
+echo "==> 8. Frontend build"
+(cd frontend && pnpm run build)
+
 echo "=============================================================================="
 echo " All validation gates passed successfully! "
 echo "=============================================================================="

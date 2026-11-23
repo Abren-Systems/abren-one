@@ -5,6 +5,27 @@ Cross-module ForeignKeys use string references ("fundraising.Donor", "fundraisin
 not direct model imports.
 """
 
+from abren_one.modules.fundraising.application.commands.activate_grant import (
+    ActivateGrantInput,
+    ActivateGrantResult,
+)
+from abren_one.modules.fundraising.application.commands.activate_grant import (
+    execute as activate_grant,
+)
+from abren_one.modules.fundraising.application.commands.award_grant import (
+    AwardGrantInput,
+    AwardGrantResult,
+)
+from abren_one.modules.fundraising.application.commands.award_grant import (
+    execute as award_grant,
+)
+from abren_one.modules.fundraising.application.commands.close_grant import (
+    CloseGrantInput,
+    CloseGrantResult,
+)
+from abren_one.modules.fundraising.application.commands.close_grant import (
+    execute as close_grant,
+)
 from abren_one.modules.fundraising.application.commands.create_donor import (
     CreateDonorInput,
     CreateDonorResult,
@@ -74,6 +95,12 @@ from abren_one.modules.fundraising.application.queries.list_grants import (
 )
 
 __all__ = [
+    "ActivateGrantInput",
+    "ActivateGrantResult",
+    "AwardGrantInput",
+    "AwardGrantResult",
+    "CloseGrantInput",
+    "CloseGrantResult",
     "CreateDonorInput",
     "CreateDonorResult",
     "CreateGrantInput",
@@ -94,6 +121,9 @@ __all__ = [
     "InvalidStateTransitionError",
     "RecordDonationInput",
     "RecordDonationResult",
+    "activate_grant",
+    "award_grant",
+    "close_grant",
     "create_donor",
     "create_grant",
     "get_donation",

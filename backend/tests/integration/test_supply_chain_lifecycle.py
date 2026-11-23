@@ -37,9 +37,13 @@ from abren_one.modules.finance.public import (
     post_journal_entry,
 )
 from abren_one.modules.fundraising.public import (
+    ActivateGrantInput,
+    AwardGrantInput,
     CreateDonorInput,
     CreateGrantInput,
     RecordDonationInput,
+    activate_grant,
+    award_grant,
     create_donor,
     create_grant,
     record_donation,
@@ -248,7 +252,27 @@ class TestSupplyChainLifecycleWorkflow:
                 program_id=program_id,
             )
         )
-        assert grant_res.grant_id is not None
+        grant_id = grant_res.grant_id
+        assert grant_id is not None
+
+        # Award and activate the grant to transition from PROPOSED -> AWARDED -> ACTIVE
+        award_res = award_grant(
+            AwardGrantInput(
+                context=director_ctx,
+                grant_id=grant_id,
+                notes="Grant awarded by OCHA panel",
+            )
+        )
+        assert award_res.status == "awarded"
+
+        activate_res = activate_grant(
+            ActivateGrantInput(
+                context=director_ctx,
+                grant_id=grant_id,
+                notes="Grant agreement countersigned and effective",
+            )
+        )
+        assert activate_res.status == "active"
 
         record_donation(
             RecordDonationInput(
@@ -257,7 +281,9 @@ class TestSupplyChainLifecycleWorkflow:
                 amount=Decimal("50000.00"),
                 currency="USD",
                 received_at=timezone.now(),
+                grant_id=grant_id,
                 program_id=program_id,
+                reference="TR-OCHA-2026-001",
             )
         )
 
@@ -687,6 +713,8 @@ class TestSupplyChainLifecycleWorkflow:
         # Fundraising
         assert "fundraising.donor.created" in action_names
         assert "fundraising.grant.created" in action_names
+        assert "fundraising.grant.awarded" in action_names
+        assert "fundraising.grant.activated" in action_names
         assert "fundraising.donation.recorded" in action_names
         # Finance
         assert "finance.account.created" in action_names
