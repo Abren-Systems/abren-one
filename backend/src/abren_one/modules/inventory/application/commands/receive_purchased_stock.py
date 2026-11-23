@@ -12,6 +12,9 @@ from abren_one.modules.inventory.application.balance_service import (
     LedgerPostingLine,
     post_ledger_entries,
 )
+from abren_one.modules.inventory.application.bridges.finance_gl import (
+    post_purchase_receipt_gl,
+)
 from abren_one.modules.inventory.application.number_generation import (
     generate_document_number,
 )
@@ -255,6 +258,23 @@ def execute(input_data: ReceivePurchasedStockInput) -> ReceivePurchasedStockResu
             "total_quantity": str(total_quantity),
         },
     )
+
+    # ── Cross-module GL bridge (ADR-006) ──────────────────────────────
+    total_value = sum(
+        line.quantity
+        * (line.unit_cost if line.unit_cost is not None else grn_items_by_po_item[line.po_item_id].unit_price)
+        for line in input_data.lines
+    )
+    if total_value > Decimal("0.00"):
+        post_purchase_receipt_gl(
+            organization_id=ctx.organization_id,
+            transaction_number=txn.transaction_number,
+            total_value=total_value,
+            currency="USD",
+            entry_date=input_data.transaction_date,
+            goods_receipt_number=grn.receipt_number,
+            purchase_order_number=grn.purchase_order_number,
+        )
 
     return ReceivePurchasedStockResult(
         transaction_id=txn.id,

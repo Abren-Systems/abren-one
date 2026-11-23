@@ -48,6 +48,12 @@ from abren_one.modules.finance.application.queries.get_account import (
 from abren_one.modules.finance.application.queries.get_account import (
     execute as get_account,
 )
+from abren_one.modules.finance.application.queries.get_account_by_code import (
+    AccountByCodeResult,
+)
+from abren_one.modules.finance.application.queries.get_account_by_code import (
+    execute as get_account_by_code,
+)
 from abren_one.modules.finance.application.queries.get_journal_entry import (
     JournalEntryDetailResult,
     JournalLineDetailResult,
@@ -88,6 +94,7 @@ __all__ = [
     "Money",
     "NormalBalance",
     # DTOs
+    "AccountByCodeResult",
     "CreateAccountInput",
     "CreateAccountResult",
     "JournalLineInput",
@@ -111,6 +118,7 @@ __all__ = [
     "reverse_journal_entry",
     # Queries
     "get_account",
+    "get_account_by_code",
     "list_accounts",
     "get_journal_entry",
     "list_journal_entries",

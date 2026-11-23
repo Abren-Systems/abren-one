@@ -6,6 +6,7 @@ import pytest
 from django.db import IntegrityError
 
 from abren_one.modules.finance.domain.exceptions import (
+    AccountNotFoundError,
     FinanceDomainError,
     ImmutableJournalEntryError,
     UnbalancedJournalEntryError,
@@ -22,6 +23,7 @@ from abren_one.modules.finance.public import (
     create_account,
     create_journal_entry,
     get_account,
+    get_account_by_code,
     get_journal_entry,
     get_trial_balance,
     post_journal_entry,
@@ -436,3 +438,60 @@ class TestDatabaseConstraints:
                     name="Unauthorized Account",
                 )
             )
+
+
+@pytest.mark.django_db
+class TestGetAccountByCode:
+    def test_get_account_by_code_success(self, org_context: tuple[uuid.UUID, ExecutionContext]):
+        org_id, ctx = org_context
+        created = create_account(
+            CreateAccountInput(
+                context=ctx,
+                code="1200",
+                name="Inventory Asset",
+                account_type=AccountType.ASSET.value,
+                currency="USD",
+            )
+        )
+        res = get_account_by_code(org_id, "1200")
+        assert res.id == created.account_id
+        assert res.code == "1200"
+        assert res.name == "Inventory Asset"
+        assert res.account_type == "asset"
+        assert res.currency == "USD"
+        assert res.is_active is True
+
+    def test_get_account_by_code_not_found(self, org_context: tuple[uuid.UUID, ExecutionContext]):
+        org_id, _ = org_context
+        with pytest.raises(AccountNotFoundError, match="Account with code '9999' not found"):
+            get_account_by_code(org_id, "9999")
+
+    def test_get_account_by_code_tenant_isolated(self, org_context: tuple[uuid.UUID, ExecutionContext]):
+        org_a_id, ctx_a = org_context
+        create_account(
+            CreateAccountInput(
+                context=ctx_a,
+                code="1200",
+                name="Org A Inventory",
+                account_type=AccountType.ASSET.value,
+            )
+        )
+        # Create Org B
+        init_ctx = ExecutionContext(
+            actor_type=ActorType.SYSTEM,
+            actor_id=None,
+            organization_id=None,
+            correlation_id=uuid.uuid4(),
+        )
+        org_b_res = create_organization(
+            CreateOrganizationInput(
+                context=init_ctx,
+                name="Other Organization",
+                slug=f"other-{uuid.uuid4().hex[:6]}",
+            )
+        )
+        org_b_id = org_b_res.organization_id
+
+        # Querying Org B for code '1200' must raise AccountNotFoundError
+        with pytest.raises(AccountNotFoundError):
+            get_account_by_code(org_b_id, "1200")

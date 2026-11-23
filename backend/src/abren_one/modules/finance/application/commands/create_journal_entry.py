@@ -17,12 +17,6 @@ from abren_one.modules.finance.domain.exceptions import (
 from abren_one.modules.finance.domain.policies import validate_journal_lines
 from abren_one.modules.finance.domain.value_objects import JournalEntryStatus
 from abren_one.modules.finance.models import Account, JournalEntry, JournalLine
-from abren_one.modules.fundraising.public import (
-    DonationNotFoundError,
-    GrantNotFoundError,
-    get_donation,
-    get_grant,
-)
 from abren_one.modules.organizations.public import get_organization
 from abren_one.modules.programs.public import ProgramNotFoundError, get_program
 from abren_one.platform.audit.service import record_audit_event
@@ -82,18 +76,6 @@ def execute(data: CreateJournalEntryInput) -> CreateJournalEntryResult:
             get_program(organization_id=org.id, program_id=data.program_id)
         except ProgramNotFoundError as exc:
             raise FinanceDomainError(f"Program {data.program_id} not found in this organization.") from exc
-
-    if data.grant_id:
-        try:
-            get_grant(grant_id=data.grant_id, organization_id=org.id)
-        except GrantNotFoundError as exc:
-            raise FinanceDomainError(f"Grant {data.grant_id} not found in this organization.") from exc
-
-    if data.donation_id:
-        try:
-            get_donation(donation_id=data.donation_id, organization_id=org.id)
-        except DonationNotFoundError as exc:
-            raise FinanceDomainError(f"Donation {data.donation_id} not found in this organization.") from exc
 
     currency = data.currency.upper()
 

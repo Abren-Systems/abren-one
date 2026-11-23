@@ -6,6 +6,9 @@ from uuid import UUID
 from django.db import transaction
 from django.utils import timezone
 
+from abren_one.modules.fundraising.application.bridges.finance_gl import (
+    post_donation_received_gl,
+)
 from abren_one.modules.fundraising.domain.exceptions import (
     DonorNotFoundError,
     FundraisingError,
@@ -119,6 +122,18 @@ def execute(data: RecordDonationInput) -> RecordDonationResult:
             "grant_id": str(grant.id) if grant else None,
             "program_id": str(data.program_id) if data.program_id else None,
         },
+    )
+
+    # ── Cross-module GL bridge (ADR-006) ──────────────────────────────
+    post_donation_received_gl(
+        organization_id=org.id,
+        donation_id=donation.id,
+        donor_name=donor.name,
+        amount=data.amount,
+        currency=data.currency,
+        received_date=received_at.date() if hasattr(received_at, "date") else received_at,
+        grant_id=grant.id if grant else None,
+        reference=data.reference,
     )
 
     return RecordDonationResult(donation_id=donation.id)

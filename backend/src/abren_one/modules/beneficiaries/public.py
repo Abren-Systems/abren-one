@@ -56,8 +56,24 @@ from abren_one.modules.beneficiaries.application.queries.list_service_deliveries
 from abren_one.modules.beneficiaries.application.queries.list_service_deliveries import (
     execute as list_service_deliveries,
 )
+from abren_one.modules.beneficiaries.domain.value_objects import (
+    BeneficiaryStatus,
+    BeneficiaryType,
+    DeliveryStatus,
+    Gender,
+    ServiceType,
+    VulnerabilityLevel,
+)
 
 __all__ = [
+    # Value Objects & Enums
+    "BeneficiaryStatus",
+    "BeneficiaryType",
+    "DeliveryStatus",
+    "Gender",
+    "ServiceType",
+    "VulnerabilityLevel",
+    # Domain Exceptions
     "BeneficiaryError",
     "BeneficiaryNotFoundError",
     "BeneficiarySummaryResult",

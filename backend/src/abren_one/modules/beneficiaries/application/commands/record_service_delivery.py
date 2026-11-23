@@ -5,6 +5,9 @@ from uuid import UUID
 
 from django.db import transaction
 
+from abren_one.modules.beneficiaries.application.bridges.inventory_stock import (
+    issue_stock_for_service_delivery,
+)
 from abren_one.modules.beneficiaries.domain.exceptions import (
     BeneficiaryError,
     BeneficiaryNotFoundError,
@@ -39,11 +42,18 @@ class RecordServiceDeliveryInput:
     activity_id: UUID | None = None
     notes: str = ""
     status: str = DeliveryStatus.DELIVERED.value
+    # Optional inventory aid distribution bridge (ADR-006)
+    warehouse_id: UUID | None = None
+    item_id: UUID | None = None
+    batch_id: UUID | None = None
+    location_id: UUID | None = None
 
 
 @dataclass(frozen=True)
 class RecordServiceDeliveryResult:
     delivery_id: UUID
+    inventory_transaction_id: UUID | None = None
+    inventory_transaction_number: str = ""
 
 
 @transaction.atomic
@@ -116,6 +126,28 @@ def execute(data: RecordServiceDeliveryInput) -> RecordServiceDeliveryResult:
         activity_id=data.activity_id,
     )
 
+    # ── Optional Inventory Stock Issue Bridge (ADR-006) ───────────────
+    inv_txn_id: UUID | None = None
+    inv_txn_number: str = ""
+    if data.warehouse_id and data.item_id:
+        issue_res = issue_stock_for_service_delivery(
+            context=data.context,
+            delivery_id=delivery.id,
+            warehouse_id=data.warehouse_id,
+            item_id=data.item_id,
+            quantity=data.quantity,
+            delivery_date=data.delivery_date,
+            beneficiary_name=beneficiary.display_name,
+            service_type=data.service_type,
+            batch_id=data.batch_id,
+            location_id=data.location_id,
+            program_id=data.program_id,
+            activity_id=data.activity_id,
+            notes=data.notes,
+        )
+        inv_txn_id = issue_res.transaction_id
+        inv_txn_number = issue_res.transaction_number
+
     record_audit_event(
         actor_type=data.context.actor_type.value,
         actor_id=data.context.actor_id,
@@ -129,7 +161,13 @@ def execute(data: RecordServiceDeliveryInput) -> RecordServiceDeliveryResult:
             "service_type": delivery.service_type,
             "quantity": str(delivery.quantity),
             "beneficiary_id": str(beneficiary.id),
+            "inventory_transaction_id": str(inv_txn_id) if inv_txn_id else None,
+            "inventory_transaction_number": inv_txn_number or None,
         },
     )
 
-    return RecordServiceDeliveryResult(delivery_id=delivery.id)
+    return RecordServiceDeliveryResult(
+        delivery_id=delivery.id,
+        inventory_transaction_id=inv_txn_id,
+        inventory_transaction_number=inv_txn_number,
+    )

@@ -11,6 +11,9 @@ from abren_one.modules.inventory.application.balance_service import (
     LedgerPostingLine,
     post_ledger_entries,
 )
+from abren_one.modules.inventory.application.bridges.finance_gl import (
+    post_write_off_gl,
+)
 from abren_one.modules.inventory.application.number_generation import (
     generate_document_number,
 )
@@ -119,6 +122,7 @@ def execute(input_data: WriteOffStockInput) -> WriteOffStockResult:
 
     posting_lines: list[LedgerPostingLine] = []
     total_quantity = Decimal("0.00")
+    total_value = Decimal("0.00")  # Track total value for GL bridge
 
     for line in input_data.lines:
         validate_positive_quantity(line.quantity)
@@ -172,6 +176,7 @@ def execute(input_data: WriteOffStockInput) -> WriteOffStockResult:
             )
         )
         total_quantity += line.quantity
+        total_value += line.quantity * item.default_unit_cost
 
     post_ledger_entries(txn, posting_lines)
 
@@ -194,6 +199,17 @@ def execute(input_data: WriteOffStockInput) -> WriteOffStockResult:
             "total_quantity": str(total_quantity),
         },
     )
+
+    # ── Cross-module GL bridge (ADR-006) ──────────────────────────────
+    if total_value > Decimal("0.00"):
+        post_write_off_gl(
+            organization_id=ctx.organization_id,
+            transaction_number=txn.transaction_number,
+            total_value=total_value,
+            currency="USD",
+            entry_date=input_data.transaction_date,
+            approval_reference=input_data.approval_reference,
+        )
 
     return WriteOffStockResult(
         transaction_id=txn.id,

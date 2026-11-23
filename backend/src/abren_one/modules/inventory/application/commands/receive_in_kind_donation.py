@@ -11,6 +11,9 @@ from abren_one.modules.inventory.application.balance_service import (
     LedgerPostingLine,
     post_ledger_entries,
 )
+from abren_one.modules.inventory.application.bridges.finance_gl import (
+    post_in_kind_donation_gl,
+)
 from abren_one.modules.inventory.application.number_generation import (
     generate_document_number,
 )
@@ -116,6 +119,7 @@ def execute(input_data: ReceiveDonationInput) -> DonationReceiptResult:
 
     posting_lines: list[LedgerPostingLine] = []
     total_quantity = Decimal("0.00")
+    total_fair_value = Decimal("0.00")  # Track fair value for GL bridge
 
     for line in input_data.lines:
         validate_positive_quantity(line.quantity)
@@ -160,6 +164,7 @@ def execute(input_data: ReceiveDonationInput) -> DonationReceiptResult:
             )
         )
         total_quantity += line.quantity
+        total_fair_value += line.quantity * line.unit_cost
 
     post_ledger_entries(txn, posting_lines)
 
@@ -181,6 +186,17 @@ def execute(input_data: ReceiveDonationInput) -> DonationReceiptResult:
             "total_quantity": str(total_quantity),
         },
     )
+
+    # ── Cross-module GL bridge (ADR-006) ──────────────────────────────
+    if total_fair_value > Decimal("0.00"):
+        post_in_kind_donation_gl(
+            organization_id=ctx.organization_id,
+            transaction_number=txn.transaction_number,
+            total_fair_value=total_fair_value,
+            currency="USD",
+            entry_date=input_data.transaction_date,
+            donor_name=input_data.donor_name.strip(),
+        )
 
     return DonationReceiptResult(
         transaction_id=txn.id,

@@ -11,6 +11,9 @@ from abren_one.modules.inventory.application.balance_service import (
     LedgerPostingLine,
     post_ledger_entries,
 )
+from abren_one.modules.inventory.application.bridges.finance_gl import (
+    post_stock_issue_gl,
+)
 from abren_one.modules.inventory.application.number_generation import (
     generate_document_number,
 )
@@ -121,6 +124,7 @@ def execute(input_data: IssueStockInput) -> IssueStockResult:
 
     posting_lines: list[LedgerPostingLine] = []
     total_quantity = Decimal("0.00")
+    item_costs: dict[UUID, Decimal] = {}  # Track unit costs for GL bridge
 
     for line in input_data.lines:
         validate_positive_quantity(line.quantity)
@@ -132,6 +136,7 @@ def execute(input_data: IssueStockInput) -> IssueStockResult:
         if not item:
             raise ItemNotFoundError(f"Item {line.item_id} not found in this organization.")
         validate_item_active(item.is_active)
+        item_costs[item.id] = item.default_unit_cost
 
         batch: ItemBatch | None = None
         if line.batch_id:
@@ -195,6 +200,18 @@ def execute(input_data: IssueStockInput) -> IssueStockResult:
             "total_quantity": str(total_quantity),
         },
     )
+
+    # ── Cross-module GL bridge (ADR-006) ──────────────────────────────
+    total_value = sum(line.quantity * item_costs.get(line.item_id, Decimal("0.00")) for line in input_data.lines)
+    if total_value > Decimal("0.00"):
+        post_stock_issue_gl(
+            organization_id=ctx.organization_id,
+            transaction_number=txn.transaction_number,
+            total_value=total_value,
+            currency="USD",
+            entry_date=input_data.transaction_date,
+            is_program_issue=input_data.is_program_issue,
+        )
 
     return IssueStockResult(
         transaction_id=txn.id,

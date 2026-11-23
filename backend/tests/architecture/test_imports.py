@@ -435,11 +435,11 @@ class TestNoCircularModuleDependencies:
         allowed_dag: dict[str, set[str]] = {
             "organizations": set(),
             "programs": {"organizations"},
-            "beneficiaries": {"organizations", "programs"},
-            "fundraising": {"organizations", "programs"},
+            "beneficiaries": {"organizations", "programs", "inventory"},
+            "fundraising": {"organizations", "programs", "finance"},
             "procurement": {"organizations", "programs"},
-            "finance": {"organizations", "programs", "fundraising"},
-            "inventory": {"organizations", "procurement"},
+            "finance": {"organizations", "programs"},
+            "inventory": {"organizations", "procurement", "finance"},
         }
 
         graph = self._build_dependency_graph(modules_root)
