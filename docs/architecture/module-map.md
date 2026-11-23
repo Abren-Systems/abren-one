@@ -20,10 +20,12 @@
 | `beneficiaries` | Beneficiary, ServiceDelivery | Beneficiary profiles and service delivery tracking |
 | `finance` | Chart of Accounts, General Ledger, Double-Entry Journal | Ledger accounts, journal entries, balanced financial postings |
 | `procurement` | Suppliers, Requisitions, Purchase Orders, Goods Receipt | Vendor directory, spend authorizations, commercial orders, delivery verification |
+| `inventory` | Stock Master Data, Immutable Ledger, Balances, Movements | Item categories, durable & consumable items, batch/expiry tracking, multi-warehouse stock balances, transfers, write-offs, intake receipts |
 
 ## Future Modules (Not Yet Implemented)
 
 | Module | Responsibility |
 |--------|---------------|
-| `inventory` | Stock, storage, distributions |
-| `governance` | Organizational controls and oversight |
+| `hr` | Staff records, employment contracts, volunteers, project allocations |
+| `reporting` | Donor financial & narrative reporting, budget vs. actuals, analytics |
+| `governance` | Organizational controls, compliance, and oversight |
