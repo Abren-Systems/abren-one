@@ -28,3 +28,27 @@ export interface ServiceDelivery {
   activity_id: string | null;
   notes: string;
 }
+
+export interface RegisterBeneficiaryPayload {
+  beneficiary_type?: "individual" | "household" | "community";
+  first_name?: string;
+  last_name?: string;
+  household_name?: string;
+  identification_number?: string;
+  vulnerability_level?: "low" | "medium" | "high" | "critical";
+  contact_phone?: string;
+  contact_address?: string;
+  gender?: string;
+  notes?: string;
+}
+
+export interface RecordDeliveryPayload {
+  beneficiary_id: string;
+  service_type: string;
+  delivery_date: string;
+  quantity: string | number;
+  unit: string;
+  program_id?: string | null;
+  activity_id?: string | null;
+  notes?: string;
+}

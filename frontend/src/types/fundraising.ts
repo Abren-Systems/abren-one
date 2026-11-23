@@ -39,3 +39,31 @@ export interface Donation {
   reference: string;
   received_at: string;
 }
+
+export interface CreateDonorPayload {
+  name: string;
+  donor_type?: string;
+  email?: string;
+  phone?: string;
+}
+
+export interface CreateGrantPayload {
+  donor_id: string;
+  title: string;
+  reference_code: string;
+  total_amount: string | number;
+  start_date: string;
+  end_date: string;
+  currency?: string;
+  program_id?: string | null;
+}
+
+export interface RecordDonationPayload {
+  donor_id: string;
+  amount: string | number;
+  currency?: string;
+  payment_method?: string;
+  reference?: string;
+  grant_id?: string | null;
+  program_id?: string | null;
+}

@@ -27,3 +27,23 @@ export interface Activity {
   status: string;
   due_date?: string | null;
 }
+
+export interface CreateProgramPayload {
+  name: string;
+  description?: string;
+  start_date?: string | null;
+  end_date?: string | null;
+}
+
+export interface CreateProjectPayload {
+  program_id: string;
+  name: string;
+  description?: string;
+  budget_currency?: string;
+}
+
+export interface CreateActivityPayload {
+  project_id: string;
+  name: string;
+  due_date?: string | null;
+}
